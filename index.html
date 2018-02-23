@@ -2,31 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <script src="./statex.js"></script>
+    <!--<script src="./statex.js"></script>-->
 
-    <!--<script src="./src/EventEmitter.js"></script>-->
+    <script src="./src/EventEmitter.js"></script>
 
-    <!--<script src="./lib/Utils.js"></script>-->
-    <!--<script src="./lib/StageUtils.js"></script>-->
+    <script src="./lib/Utils.js"></script>
+    <script src="./lib/StageUtils.js"></script>
 
-    <!--<script src="./src/Base.js"></script>-->
-    <!--<script src="./src/Stage.js"></script>-->
-    <!--<script src="./src/View.js"></script>-->
-    <!--<script src="./src/ObjectList.js"></script>-->
-    <!--<script src="./src/ViewChildList.js"></script>-->
+    <script src="./src/Base.js"></script>
+    <script src="./src/Stage.js"></script>
+    <script src="./src/View.js"></script>
+    <script src="./src/ViewTransforms.js"></script>
+    <script src="./src/ObjectList.js"></script>
+    <script src="./src/ViewChildList.js"></script>
 
-    <!--<script src="./lib/structure/Component.js"></script>-->
-    <!--<script src="./lib/structure/Application.js"></script>-->
-    <!--<script src="./lib/structure/StateManager.js"></script>-->
+    <script src="./lib/structure/Component.js"></script>
+    <script src="./lib/structure/Application.js"></script>
+    <script src="./lib/structure/StateManager.js"></script>
 
-    <!--<script src="./lib/animation/Animation.js"></script>-->
-    <!--<script src="./lib/animation/AnimationActionItems.js"></script>-->
-    <!--<script src="./lib/animation/AnimationActionSettings.js"></script>-->
-    <!--<script src="./lib/animation/AnimationManager.js"></script>-->
-    <!--<script src="./lib/animation/AnimationSettings.js"></script>-->
-    <!--<script src="./lib/animation/Transition.js"></script>-->
-    <!--<script src="./lib/animation/TransitionManager.js"></script>-->
-    <!--<script src="./lib/animation/TransitionSettings.js"></script>-->
+    <script src="./lib/animation/Animation.js"></script>
+    <script src="./lib/animation/AnimationActionItems.js"></script>
+    <script src="./lib/animation/AnimationActionSettings.js"></script>
+    <script src="./lib/animation/AnimationManager.js"></script>
+    <script src="./lib/animation/AnimationSettings.js"></script>
+    <script src="./lib/animation/Transition.js"></script>
+    <script src="./lib/animation/TransitionManager.js"></script>
+    <script src="./lib/animation/TransitionSettings.js"></script>
 
 </head>
 <body style="margin: 0;background:#000">
@@ -61,7 +62,7 @@
 
             static _template() {
                 return {
-                    "Label": {type: 'div', tag: 'te', style: {fontSize: 20}, children: [{type: 'span', style: {color: 'red'}, text: "Hello"}, '. How are you?']},
+                    "Label": {x: 1000, y: 600, w: 400, h: 100, type: 'div', tag: 'te', style: {}, children: [{type: 'span', style: {color: 'red', fontSize: '200px'}, text: "Hello"}, '. How are you?']},
                     "Image": {t: 'img', attribs: {src: 'https://www.metrological.com/images/logo2x.2.png'}}
                 }
             }
@@ -69,9 +70,15 @@
             static _states() {
                 return {
                     "init": function() {
-                        this.sel(".Label").animation({duration: 5, actions: [{p: 'x', v: {0: 0, 1: 1000}}]}).start()
+                        //this.sel(".Label").animation({duration: 5, actions: [{p: 'x', v: {0: 0, 1: 1000}}]}).start()
                         this.sel(".Label").$.opacity = 1
-                        this.sel(".Label").setSmooth('$.opacity', 0, {delay: 1, duration: 5})
+
+                        this.sel(".Label").transform.item(500).rotate = 1
+                        this.sel(".Label").transform.item(501).skew = 1
+                        this.sel(".Label").animation({duration: 5, actions: [{p: 'transform.item(501).rotateX', v: {0: 0, 1: 10}}]}).start()
+//                        setTimeout(() => {
+//                            this.sel(".Label").transform.item(500).rotate = 0
+//                        }, 1000)
                     }
                 }
             }

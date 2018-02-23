@@ -6,18 +6,14 @@ class View extends EventEmitter {
         this._id = ++View.id
         this._e = this.stage.document.createElement(type)
         this._e.__view = this
-        this._x = 0
-        this._y = 0
         this._pivotX = 0.5
         this._pivotY = 0.5
-        this._rotation = 0
-        this._scaleX = 1
-        this._scaleY = 1
         this._active = false
         this._attached = false
         this._parent = null
         this._textMode = false
         this._childList = undefined
+        this._transform = undefined
     }
 
     setAsRoot() {
@@ -106,6 +102,30 @@ class View extends EventEmitter {
             let name = names[i]
             this.$[name] = settings[name]
         }
+    }
+
+    get transform() {
+        if (!this._transform) {
+            this._transform = new ViewTransforms(this)
+        }
+
+        return this._transform
+    }
+
+    set transform(settings) {
+        this.transform.patch(settings)
+    }
+
+    _applyTransform(prio, name, value) {
+        this.transform.item(prio, true)[name] = value
+    }
+
+    _getTransform(prio, def = 0) {
+        const v = this.transform.item(prio, true).orig
+        if (v === undefined) {
+            return def
+        }
+        return v
     }
 
     set ref(v) {
@@ -426,19 +446,21 @@ class View extends EventEmitter {
     }
 
     get alpha() {
-        return this.$.opacity
+        return (this.$.opacity === '' ? 1 : this.$.opacity)
     }
 
     set alpha(v) {
         this.$.opacity = v
+        this._updateActive()
     }
 
     get visible() {
-        return this.$.visibility === 'visible'
+        return (this.$.visibility === 'visible' || this.$.visibility === '')
     }
 
     set visible(v) {
         this.$.visibility = v ? 'visible' : 'hidden'
+        this._updateActive()
     }
     
     get pivotX() {
@@ -469,27 +491,28 @@ class View extends EventEmitter {
         this._updateTransformOrigin()
     }
 
+    get rotation() {
+        return this._getTransform(102, 0)
+    }
+
     set rotation(v) {
-        this._rotation = v
-        this._updateTransform()
+        this._applyTransform(102, 'rotate', v)
     }
     
     get scaleX() {
-        return this._scaleX
+        return this._getTransform(100, 1)
     }
     
     set scaleX(v) {
-        this._scaleX = v
-        this._updateTransform()
+        this._applyTransform(100, 'scaleX', v)
     }
 
     get scaleY() {
-        return this._scaleY
+        return this._getTransform(101, 1)
     }
 
     set scaleY(v) {
-        this._scaleY = v
-        this._updateTransform()
+        this._applyTransform(101, 'scaleY', v)
     }
 
     get scale() {
@@ -499,41 +522,38 @@ class View extends EventEmitter {
     set scale(v) {
         this._scaleX = v
         this._scaleY = v
-        this._updateTransform()
     }
 
     get x() {
-        return this._x
+        return this._getTransform(98, 0)
     }
 
     set x(v) {
-        this._x = v
-        this._updateTransform()
+        this._applyTransform(98, 'translateX', v)
     }
 
     get y() {
-        return this._y
+        return this._getTransform(99, 0)
     }
 
     set y(v) {
-        this._y = v
-        this._updateTransform()
+        this._applyTransform(99, 'translateY', v)
     }
 
     get w() {
-        return this.$.w
+        return (this.$.width.endsWith("px") ? parseFloat(this.$.width.substr(0, -2)) : 0)
     }
 
     set w(v) {
-        this.$.w = v
+        this.$.width = v + 'px'
     }
 
     get h() {
-        return this.$.h
+        return (this.$.height.endsWith("px") ? parseFloat(this.$.height.substr(0, -2)) : 0)
     }
 
     set h(v) {
-        this.$.h = v
+        this.$.height = v + 'px'
     }
 
     get clipping() {
@@ -690,11 +710,13 @@ class View extends EventEmitter {
 
     _updateTransform() {
         const parts = [];
-        const sx = this._scaleX, sy = this._scaleY
-        if ((sx !== undefined && sy !== undefined) && (sx !== 1 || sy !== 1)) parts.push('scale(' + sx + ', ' + sy + ')');
-        if (this._rotation) parts.push('rotate(' + this._rotation + 'rad)');
-        if (this._x) parts.push('translateX(' + this._x + 'px)');
-        if (this._y) parts.push('translateY(' + this._y + 'px)');
+        const ids = Object.keys(this._transform).map(id => parseFloat(id)).sort()
+        ids.forEach((id) => {
+            const names = Object.keys(this._transform[id])
+            names.forEach(names, (name) => {
+                parts.push(name + '(' + this._transform[id][name] + ')')
+            })
+        })
         this.$.transform = parts.join(' ');
     }
 
@@ -772,24 +794,25 @@ class View extends EventEmitter {
     _setTransition(property, settings) {
         if (!settings) {
             this._removeTransition(property);
-        }
-        if (Utils.isObjectLiteral(settings)) {
-            // Convert plain object to proper settings object.
-            settings = this.stage.transitions.createSettings(settings);
-        }
-
-        if (!this._transitions) {
-            this._transitions = {};
-        }
-
-        let current = this._transitions[property];
-        if (current && current.isTransition) {
-            // Runtime settings change.
-            current.settings = settings;
-            return current;
         } else {
-            // Initially, only set the settings and upgrade to a 'real' transition when it is used.
-            this._transitions[property] = settings;
+            if (Utils.isObjectLiteral(settings)) {
+                // Convert plain object to proper settings object.
+                settings = this.stage.transitions.createSettings(settings);
+            }
+
+            if (!this._transitions) {
+                this._transitions = {};
+            }
+
+            let current = this._transitions[property];
+            if (current && current.isTransition) {
+                // Runtime settings change.
+                current.settings = settings;
+                return current;
+            } else {
+                // Initially, only set the settings and upgrade to a 'real' transition when it is used.
+                this._transitions[property] = settings;
+            }
         }
     }
 

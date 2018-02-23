@@ -11,6 +11,7 @@ module.exports = function(grunt) {
                     './src/View.js',
                     './src/ObjectList.js',
                     './src/ViewChildList.js',
+                    './src/ViewTransforms.js',
                     './lib/structure/Component.js',
                     './lib/structure/Application.js',
                     './lib/structure/StateManager.js',
