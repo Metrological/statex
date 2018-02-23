@@ -1,0 +1,16 @@
+{
+  "author": "Metrological, Bas van Meurs <b.van.meurs@metrological.com>",
+  "name": "statex",
+  "version": "0.0.10",
+  "main": "statex.js",
+  "license": "apache",
+  "devDependencies": {
+    "grunt": "^1.0.1",
+    "grunt-contrib-concat": "*",
+    "grunt-strip-code": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  }
+}

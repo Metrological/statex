@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <script src="./statex.js"></script>
+
+    <!--<script src="./src/EventEmitter.js"></script>-->
+
+    <!--<script src="./lib/Utils.js"></script>-->
+    <!--<script src="./lib/StageUtils.js"></script>-->
+
+    <!--<script src="./src/Base.js"></script>-->
+    <!--<script src="./src/Stage.js"></script>-->
+    <!--<script src="./src/View.js"></script>-->
+    <!--<script src="./src/ObjectList.js"></script>-->
+    <!--<script src="./src/ViewChildList.js"></script>-->
+
+    <!--<script src="./lib/structure/Component.js"></script>-->
+    <!--<script src="./lib/structure/Application.js"></script>-->
+    <!--<script src="./lib/structure/StateManager.js"></script>-->
+
+    <!--<script src="./lib/animation/Animation.js"></script>-->
+    <!--<script src="./lib/animation/AnimationActionItems.js"></script>-->
+    <!--<script src="./lib/animation/AnimationActionSettings.js"></script>-->
+    <!--<script src="./lib/animation/AnimationManager.js"></script>-->
+    <!--<script src="./lib/animation/AnimationSettings.js"></script>-->
+    <!--<script src="./lib/animation/Transition.js"></script>-->
+    <!--<script src="./lib/animation/TransitionManager.js"></script>-->
+    <!--<script src="./lib/animation/TransitionSettings.js"></script>-->
+
+</head>
+<body style="margin: 0;background:#000">
+
+<div id="ui"></div>
+
+<script>
+    window.onload = function() {
+        class TestComponent extends Application {
+
+            static _template() {
+                return {
+                    "Image": {type: 'img', rotation: 0, pivot: 0, style: {position: 'absolute'}, attribs: {src: "https://www.metrological.com/images/logo2x.2.png"}},
+                    "Sub": {type: SubComponent, prop: 1}
+                }
+            }
+
+            static _states() {
+                return {
+                    "init": function() {
+                        console.log(this)
+                    },
+                    "handleRight": function() {
+                        console.log('right')
+                    }
+                }
+            }
+
+        }
+
+        class SubComponent extends Component {
+
+            static _template() {
+                return {
+                    "Label": {type: 'div', tag: 'te', style: {fontSize: 20}, children: [{type: 'span', style: {color: 'red'}, text: "Hello"}, '. How are you?']},
+                    "Image": {t: 'img', attribs: {src: 'https://www.metrological.com/images/logo2x.2.png'}}
+                }
+            }
+
+            static _states() {
+                return {
+                    "init": function() {
+                        this.sel(".Label").animation({duration: 5, actions: [{p: 'x', v: {0: 0, 1: 1000}}]}).start()
+                        this.sel(".Label").$.opacity = 1
+                        this.sel(".Label").setSmooth('$.opacity', 0, {delay: 1, duration: 5})
+                    }
+                }
+            }
+
+            get prop() {
+                return this._prop
+            }
+
+            set prop(v) {
+                this._prop = v
+            }
+        }
+
+        const stage = new Stage(document, {});
+
+        const app = new TestComponent(stage, {debug: true})
+        stage.root.patch({
+            __create: true,
+            App: app
+        })
+
+        window.app = app
+        window.addEventListener('keydown', e => {
+            app.receiveKeydown(e)
+        })
+
+        document.getElementById('ui').appendChild(stage.root.e)
+    }
+</script>
+</body>
+</html>
