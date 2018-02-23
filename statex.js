@@ -1563,12 +1563,18 @@ class View extends EventEmitter {
         return t
     }
 
-    on(event, listener) {
+    onE(event, listener) {
         this.e.addEventListener(event, listener)
     }
 
-    off(event, listener) {
+    offE(event, listener) {
         this.e.removeEventListener(event, listener)
+    }
+
+    fireOnE(event, fireEvent) {
+        return this.onE(event, function(...args) {
+            this.fire(fireEvent, args)
+        })
     }
 
     fireOn(event, fireEvent) {
