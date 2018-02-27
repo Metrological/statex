@@ -760,7 +760,7 @@ class View extends EventEmitter {
         this._textMode = false
         this._childList = undefined
         this._transform = undefined
-        this._htmlEventListeners = {}
+        this._emitHtmlEvent = undefined
     }
 
     setAsRoot() {
@@ -1148,6 +1148,68 @@ class View extends EventEmitter {
     _throwError(message) {
         throw new Error(this.constructor.name + " (" + this.getLocationString() + "): " + message)
     }
+
+    getDepth() {
+        let depth = 0;
+
+        let p = this._parent;
+        while(p) {
+            depth++;
+            p = p._parent;
+        }
+
+        return depth;
+    };
+
+    getAncestor(l) {
+        let p = this;
+        while (l > 0 && p._parent) {
+            p = p._parent;
+            l--;
+        }
+        return p;
+    };
+
+    getAncestorAtDepth(depth) {
+        let levels = this.getDepth() - depth;
+        if (levels < 0) {
+            return null;
+        }
+        return this.getAncestor(levels);
+    };
+
+    isAncestorOf(c) {
+        let p = c;
+        while(p = p.parent) {
+            if (this === p) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    getSharedAncestor(c) {
+        let o1 = this;
+        let o2 = c;
+        let l1 = o1.getDepth();
+        let l2 = o2.getDepth();
+        if (l1 > l2) {
+            o1 = o1.getAncestor(l1 - l2);
+        } else if (l2 > l1) {
+            o2 = o2.getAncestor(l2 - l1);
+        }
+
+        do {
+            if (o1 === o2) {
+                return o1;
+            }
+
+            o1 = o1._parent;
+            o2 = o2._parent;
+        } while (o1 && o2);
+
+        return null;
+    };
 
     getLocationString() {
         let i;
@@ -1607,39 +1669,45 @@ class View extends EventEmitter {
         })
     }
 
-    get htmlEventListeners() {
-        if (!this._htmlEventListeners) {
-            this._htmlEventListeners = {}
+    get emitHtmlEvent() {
+        if (!this._emitHtmlEvent) {
+            this._emitHtmlEvent = {}
         }
-        return this._htmlEventListeners
+        return this._emitHtmlEvent
     }
+    
+    set emitHtmlEvent(obj) {
+        let isArray = Array.isArray(obj)
+        let events
+        if (isArray) {
+            events = obj
+        } else {
+            events = Object.keys(obj)
+        }
 
-    set htmlEvents(obj) {
-        let events = Object.keys(obj)
         events.forEach(name => {
-            const stateEvent = obj[name]
-            if (this.htmlEventListeners[stateEvent] && this.htmlEventListeners[stateEvent].stateEvent === name) {
+            const target = isArray ? name : obj[name]
+            if (this.emitHtmlEvent[name] && this.emitHtmlEvent[name].target === name) {
                 // Skip.
                 return
             }
 
-            if (this.htmlEventListeners[stateEvent]) {
-                this.e.removeEventListener(this.htmlEventListeners[stateEvent])
+            if (this.emitHtmlEvent[name]) {
+                this.e.removeEventListener(this.emitHtmlEvent[name])
             }
 
-            if (!stateEvent) {
-                delete this.htmlEventListeners[stateEvent]
+            if (!target) {
+                delete this.emitHtmlEvent[name]
             } else {
                 const listener = (e) => {
-                    Component.getParent(this).fire(stateEvent, e)
+                    Component.getComponent(this).emit(target, {event: e, view: this})
                 }
-                listener.stateEvent = stateEvent
+                listener.target = target
                 this.e.addEventListener(name, listener)
-                this.htmlEventListeners[stateEvent] = listener
+                this.emitHtmlEvent[name] = listener
             }
         })
     }
-
 
     static getGetter(propertyPath) {
         let getter = View.PROP_GETTERS.get(propertyPath);
@@ -2410,7 +2478,8 @@ class Component extends View {
         this.on('enabled', () => this.__enable())
         this.on('disable', () => this.__disable())
 
-        this._eventListeners = {}
+        this._passEmit = undefined
+        this._passEmitFire = undefined
     }
 
     get application() {
@@ -2582,7 +2651,7 @@ class Component extends View {
      * @param args
      * @private
      */
-    _broadcast(event, args) {
+    broadcast(event, args) {
         let current = this
         do {
             current.emit(event, args)
@@ -2590,49 +2659,96 @@ class Component extends View {
         } while(current)
     }
 
-    get eventListeners() {
-        if (!this._eventListeners) {
-            this._eventListeners = {}
+    get passEmit() {
+        if (!this._passEmit) {
+            this._passEmit = {}
         }
-        return this._eventListeners
+        return this._passEmit
     }
 
-    get events() {
-        return this._eventListeners
-    }
+    set passEmit(obj) {
+        let isArray = Array.isArray(obj)
+        let events
+        if (isArray) {
+            events = obj
+        } else {
+            events = Object.keys(obj)
+        }
 
-    set events(obj) {
-        let events = Object.keys(obj)
         events.forEach(name => {
-            const stateEvent = obj[name]
-            if (this.eventListeners[stateEvent] && this.eventListeners[stateEvent].stateEvent === name) {
+            const target = isArray ? name : obj[name]
+            if (this.passEmit[name] && this.passEmit[name].target === name) {
                 // Skip.
                 return
             }
 
-            if (this.eventListeners[stateEvent]) {
-                this.off(this.eventListeners[stateEvent])
+            if (this.passEmit[name]) {
+                this.off(this.passEmit[name])
             }
 
-            if (!stateEvent) {
-                delete this.eventListeners[stateEvent]
+            if (!target) {
+                delete this.passEmit[name]
             } else {
                 const listener = (e) => {
-                    Component.getParent(this).fire(stateEvent, e)
+                    Component.getParent(this).emit(target, e)
                 }
-                listener.stateEvent = stateEvent
+                listener.target = target
                 this.on(name, listener)
-                this.eventListeners[stateEvent] = listener
+                this.passEmit[name] = listener
             }
         })
     }
 
-    static getParent(view) {
+    get passEmitFire() {
+        if (!this._passEmitFire) {
+            this._passEmitFire = {}
+        }
+        return this._passEmitFire
+    }
+
+    set passEmitFire(obj) {
+        let isArray = Array.isArray(obj)
+        let events
+        if (isArray) {
+            events = obj
+        } else {
+            events = Object.keys(obj)
+        }
+
+        events.forEach(name => {
+            const target = isArray ? name : obj[name]
+            if (this.passEmitFire[name] && this.passEmitFire[name].target === name) {
+                // Skip.
+                return
+            }
+
+            if (this.passEmitFire[name]) {
+                this.off(this.passEmitFire[name])
+            }
+
+            if (!target) {
+                delete this.passEmitFire[name]
+            } else {
+                const listener = (e) => {
+                    Component.getParent(this).fire(target, e)
+                }
+                listener.target = target
+                this.on(name, listener)
+                this.passEmitFire[name] = listener
+            }
+        })
+    }    
+
+    static getComponent(view) {
         let parent = view
         while (parent && !parent.isComponent) {
             parent = parent.parent
         }
         return parent
+    }
+
+    static getParent(view) {
+        return Component.getComponent(view.parent)
     }
 
 }
