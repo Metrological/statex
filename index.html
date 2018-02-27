@@ -40,8 +40,8 @@
 
             static _template() {
                 return {
-                    "Image": {type: 'img', rotation: 0, pivot: 0, style: {position: 'absolute'}, attribs: {src: "https://www.metrological.com/images/logo2x.2.png"}},
-                    "Sub": {type: SubComponent, prop: 1}
+                    "Image": {type: 'img', htmlEvents: {click: "clickImage"}, events: {}, rotation: 0, pivot: 0, style: {position: 'absolute'}, attribs: {src: "https://www.metrological.com/images/logo2x.2.png"}},
+                    "Sub": {type: SubComponent, prop: 1, events: {"ready": "ready", "rrr": "bla"}}
                 }
             }
 
@@ -52,6 +52,10 @@
                     },
                     "handleRight": function() {
                         console.log('right')
+                    },
+                    "clickImage": function(event) {
+                        console.log('event fired')
+                        this.patch({"Image": {htmlEvents: {click: undefined}}})
                     }
                 }
             }
@@ -74,7 +78,6 @@
                         this.sel(".Label").$.opacity = 1
 
                         this.sel(".Label").transform.item(500).rotate = 1
-                        this.sel(".Label").transform.item(501).skew = 1
                         this.sel(".Label").animation({duration: 5, actions: [{p: 'transform.item(501).rotateX', v: {0: 0, 1: 10}}]}).start()
 //                        setTimeout(() => {
 //                            this.sel(".Label").transform.item(500).rotate = 0

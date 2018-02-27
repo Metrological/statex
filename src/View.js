@@ -14,6 +14,7 @@ class View extends EventEmitter {
         this._textMode = false
         this._childList = undefined
         this._transform = undefined
+        this._htmlEventListeners = {}
     }
 
     setAsRoot() {
@@ -859,6 +860,40 @@ class View extends EventEmitter {
             this.fire(fireEvent, args)
         })
     }
+
+    get htmlEventListeners() {
+        if (!this._htmlEventListeners) {
+            this._htmlEventListeners = {}
+        }
+        return this._htmlEventListeners
+    }
+
+    set htmlEvents(obj) {
+        let events = Object.keys(obj)
+        events.forEach(name => {
+            const stateEvent = obj[name]
+            if (this.htmlEventListeners[stateEvent] && this.htmlEventListeners[stateEvent].stateEvent === name) {
+                // Skip.
+                return
+            }
+
+            if (this.htmlEventListeners[stateEvent]) {
+                this.e.removeEventListener(this.htmlEventListeners[stateEvent])
+            }
+
+            if (!stateEvent) {
+                delete this.htmlEventListeners[stateEvent]
+            } else {
+                const listener = (e) => {
+                    Component.getParent(this).fire(stateEvent, e)
+                }
+                listener.stateEvent = stateEvent
+                this.e.addEventListener(name, listener)
+                this.htmlEventListeners[stateEvent] = listener
+            }
+        })
+    }
+
 
     static getGetter(propertyPath) {
         let getter = View.PROP_GETTERS.get(propertyPath);

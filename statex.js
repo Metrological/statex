@@ -760,6 +760,7 @@ class View extends EventEmitter {
         this._textMode = false
         this._childList = undefined
         this._transform = undefined
+        this._htmlEventListeners = {}
     }
 
     setAsRoot() {
@@ -1606,6 +1607,40 @@ class View extends EventEmitter {
         })
     }
 
+    get htmlEventListeners() {
+        if (!this._htmlEventListeners) {
+            this._htmlEventListeners = {}
+        }
+        return this._htmlEventListeners
+    }
+
+    set htmlEvents(obj) {
+        let events = Object.keys(obj)
+        events.forEach(name => {
+            const stateEvent = obj[name]
+            if (this.htmlEventListeners[stateEvent] && this.htmlEventListeners[stateEvent].stateEvent === name) {
+                // Skip.
+                return
+            }
+
+            if (this.htmlEventListeners[stateEvent]) {
+                this.e.removeEventListener(this.htmlEventListeners[stateEvent])
+            }
+
+            if (!stateEvent) {
+                delete this.htmlEventListeners[stateEvent]
+            } else {
+                const listener = (e) => {
+                    Component.getParent(this).fire(stateEvent, e)
+                }
+                listener.stateEvent = stateEvent
+                this.e.addEventListener(name, listener)
+                this.htmlEventListeners[stateEvent] = listener
+            }
+        })
+    }
+
+
     static getGetter(propertyPath) {
         let getter = View.PROP_GETTERS.get(propertyPath);
         if (!getter) {
@@ -2374,6 +2409,8 @@ class Component extends View {
         this.on('inactive', () => this.__inactive())
         this.on('enabled', () => this.__enable())
         this.on('disable', () => this.__disable())
+
+        this._eventListeners = {}
     }
 
     get application() {
@@ -2551,6 +2588,51 @@ class Component extends View {
             current.emit(event, args)
             current = current.cparent
         } while(current)
+    }
+
+    get eventListeners() {
+        if (!this._eventListeners) {
+            this._eventListeners = {}
+        }
+        return this._eventListeners
+    }
+
+    get events() {
+        return this._eventListeners
+    }
+
+    set events(obj) {
+        let events = Object.keys(obj)
+        events.forEach(name => {
+            const stateEvent = obj[name]
+            if (this.eventListeners[stateEvent] && this.eventListeners[stateEvent].stateEvent === name) {
+                // Skip.
+                return
+            }
+
+            if (this.eventListeners[stateEvent]) {
+                this.off(this.eventListeners[stateEvent])
+            }
+
+            if (!stateEvent) {
+                delete this.eventListeners[stateEvent]
+            } else {
+                const listener = (e) => {
+                    Component.getParent(this).fire(stateEvent, e)
+                }
+                listener.stateEvent = stateEvent
+                this.on(name, listener)
+                this.eventListeners[stateEvent] = listener
+            }
+        })
+    }
+
+    static getParent(view) {
+        let parent = view
+        while (parent && !parent.isComponent) {
+            parent = parent.parent
+        }
+        return parent
     }
 
 }
