@@ -34,10 +34,10 @@ class View extends EventEmitter {
 
         if (oldTagRootId !== newTagRootId) {
             if (oldTagRootId) {
-                this._clearTagRec('_R' + this._parent.tagRootId)
+                this._clearTagRec('_R' + oldTagRootId)
             }
             if (newTagRootId) {
-                this._setTagRec('_R' + this._parent.tagRootId)
+                this._setTagRec('_R' + newTagRootId)
             }
         }
     }
