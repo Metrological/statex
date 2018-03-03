@@ -656,8 +656,11 @@ class Base {
     static patchObjectProperty(obj, name, value) {
         let setter = obj.setSetting || Base.defaultSetter;
 
-        // Type is a reserved keyword to specify the class type on creation.
-        if (name.substr(0, 2) !== "__" && name !== "type") {
+        if (name.substr(0, 1) !== "_") {
+            // Disallow patching private variables.
+            console.error("Patch of private property '" + name + "' is not allowed")
+        } else if (name !== "type") {
+            // Type is a reserved keyword to specify the class type on creation.
             if (Utils.isFunction(value) && value.__local) {
                 // Local function (Base.local(s => s.something))
                 value = value.__local(obj)
@@ -780,10 +783,10 @@ class View extends EventEmitter {
 
         if (oldTagRootId !== newTagRootId) {
             if (oldTagRootId) {
-                this._clearTagRec('_R' + this._parent.tagRootId)
+                this._clearTagRec('_R' + oldTagRootId)
             }
             if (newTagRootId) {
-                this._setTagRec('_R' + this._parent.tagRootId)
+                this._setTagRec('_R' + newTagRootId)
             }
         }
     }
@@ -906,6 +909,9 @@ class View extends EventEmitter {
     set text(t) {
         // This property is not allowed together with children.
         if (this._childList) this._childList.clear()
+        if (this.e.firstChild) {
+            this.e.removeChild(this.e.firstChild)
+        }
         this.e.appendChild(document.createTextNode(t))
         this._textMode = true
         this._childList = undefined

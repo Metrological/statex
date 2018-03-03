@@ -160,6 +160,9 @@ class View extends EventEmitter {
     set text(t) {
         // This property is not allowed together with children.
         if (this._childList) this._childList.clear()
+        if (this.e.firstChild) {
+            this.e.removeChild(this.e.firstChild)
+        }
         this.e.appendChild(document.createTextNode(t))
         this._textMode = true
         this._childList = undefined
