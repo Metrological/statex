@@ -645,13 +645,18 @@ class Base {
     }
 
     static patchObject(obj, settings) {
-        let names = Object.keys(settings)
-        for (let i = 0, n = names.length; i < n; i++) {
-            let name = names[i]
+        if (!Utils.isObjectLiteral(settings)) {
+            console.error("Settings must be object literal")
+        } else {
+            let names = Object.keys(settings)
+            for (let i = 0, n = names.length; i < n; i++) {
+                let name = names[i]
 
-            this.patchObjectProperty(obj, name, settings[name])
+                this.patchObjectProperty(obj, name, settings[name])
+            }
         }
     }
+
 
     static patchObjectProperty(obj, name, value) {
         let setter = obj.setSetting || Base.defaultSetter;
@@ -1939,6 +1944,7 @@ class ObjectList {
                     if (c !== s) {
                         // Replace previous item
                         let idx = this.getIndex(c)
+                        s.ref = cref
                         this.setAt(s, idx)
                     }
                 } else {
