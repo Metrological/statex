@@ -7,7 +7,7 @@ class ViewChildList extends ObjectList {
         super()
         this._view = view
     }
-    
+
     get e() {
         return this._view.e
     }
@@ -47,8 +47,8 @@ class ViewChildList extends ObjectList {
         })
     }
 
-    onSet(item, index) {
-        this.e.replaceChild(item.e, this.e.children[index])
+    onSet(item, index, prevItem) {
+        this.e.replaceChild(item.e, prevItem)
         this.e.children[index].__view._updateParent()
         item._updateParent()
     }
