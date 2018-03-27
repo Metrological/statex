@@ -2,25 +2,57 @@ class Stage extends EventEmitter {
 
     constructor(document, options = {}) {
         super()
+        this._setOptions(options);
+
         this.document = document
-        this.options = options
 
         this.transitions = new TransitionManager(this);
         this.animations = new AnimationManager(this);
 
-        this._root = new View(this)
-        this._root.setAsRoot()
+        this.__looping = false
+    }
 
-        this._looping = false
+    destroy() {
+        this._stopLoop()
+        this._destroyed = true;
+    }
+
+    getOption(name) {
+        return this._options[name]
+    }
+
+    _setOptions(o) {
+        this._options = {};
+
+        let opt = (name, def) => {
+            let value = o[name];
+
+            if (value === undefined) {
+                this._options[name] = def;
+            } else {
+                this._options[name] = value;
+            }
+        }
+
+        opt('fixedDt', undefined);
+    }
+
+    setApplication(app) {
+        this.application = app
+    }
+
+    init() {
+        this.application.setAsRoot();
+        this._startLoop()
     }
 
     get root() {
-        return this._root
+        return this.application
     }
 
     drawFrame() {
-        if (this.options.fixedDt) {
-            this.dt = this.options.fixedDt;
+        if (this.getOption('fixedDt')) {
+            this.dt = this.getOption('fixedDt');
         } else {
             this.dt = (!this.startTime) ? .02 : .001 * (this.currentTime - this.startTime);
         }
@@ -31,20 +63,20 @@ class Stage extends EventEmitter {
     }
 
     _startLoop() {
-        this._looping = true;
+        this.__looping = true;
         if (!this._awaitingLoop) {
             this._loop();
         }
     }
 
     _stopLoop() {
-        this._looping = false;
+        this.__looping = false;
     }
 
     _loop() {
         let lp = () => {
             this._awaitingLoop = false;
-            if (this._looping) {
+            if (this.__looping) {
                 this.drawFrame();
 
                 if (this.transitions.active.size || this.animations.active.size) {
@@ -52,7 +84,7 @@ class Stage extends EventEmitter {
                     this._awaitingLoop = true;
                 } else {
                     // Stop looping until animations are added.
-                    this._looping = false
+                    this.__looping = false
                 }
             }
         }

@@ -3,18 +3,18 @@ class View extends EventEmitter {
     constructor(stage, type = 'div') {
         super()
         this.stage = stage
-        this._id = ++View.id
-        this._e = this.stage.document.createElement(type)
-        this._e.__view = this
-        this._pivotX = 0.5
-        this._pivotY = 0.5
-        this._active = false
-        this._attached = false
-        this._parent = null
-        this._textMode = false
-        this._childList = undefined
-        this._transform = undefined
-        this._emitHtmlEvent = undefined
+        this.__id = ++View.id
+        this.__e = this.stage.document.createElement(type)
+        this.__e.__view = this
+        this.__pivotX = 0.5
+        this.__pivotY = 0.5
+        this.__active = false
+        this.__attached = false
+        this.__parent = null
+        this.__textMode = false
+        this.__childList = undefined
+        this.__transform = undefined
+        this.__emitHtmlEvent = undefined
     }
 
     setAsRoot() {
@@ -24,11 +24,11 @@ class View extends EventEmitter {
     }
 
     _updateParent() {
-        const newParent = this._e.parentNode ? this._e.parentNode.__view : null
-        const oldTagRootId = this._parent ? this._parent.tagRootId : 0
+        const newParent = this.__e.parentNode ? this.__e.parentNode.__view : null
+        const oldTagRootId = this.__parent ? this.__parent.tagRootId : 0
         const newTagRootId = newParent ? newParent.tagRootId : 0
 
-        this._parent = newParent
+        this.__parent = newParent
         this._updateAttached()
         this._updateActive()
 
@@ -44,11 +44,11 @@ class View extends EventEmitter {
 
     _updateAttached() {
         const newAttached = this.isAttached()
-        if (this._attached !== newAttached) {
-            this._attached = newAttached
+        if (this.__attached !== newAttached) {
+            this.__attached = newAttached
 
-            if (this._childList) {
-                let children = this._childList.get();
+            if (this.__childList) {
+                let children = this.__childList.get();
                 if (children) {
                     let m = children.length;
                     if (m > 0) {
@@ -65,20 +65,20 @@ class View extends EventEmitter {
 
     _updateActive() {
         const newActive = this.isActive()
-        if (this._active !== newActive) {
+        if (this.__active !== newActive) {
             this.emit(newActive ? 'active' : 'inactive')
             this.emit(newActive ? 'enable' : 'disable')
-            this._active = newActive
+            this.__active = newActive
         }
     }
 
     // We don't have 'within bounds' support so we bundle active/enabled events.
     isAttached() {
-        return (this._parent ? this._parent._attached : (this.stage.root === this))
+        return (this.__parent ? this.__parent.__attached : (this.stage.root === this))
     }
 
     isActive() {
-        return this.isVisible() && (this._parent ? this._parent._active : (this.stage.root === this));
+        return this.isVisible() && (this.__parent ? this.__parent.__active : (this.stage.root === this));
     }
 
     isVisible() {
@@ -106,11 +106,11 @@ class View extends EventEmitter {
     }
 
     get transform() {
-        if (!this._transform) {
-            this._transform = new ViewTransforms(this)
+        if (!this.__transform) {
+            this.__transform = new ViewTransforms(this)
         }
 
-        return this._transform
+        return this.__transform
     }
 
     set transform(settings) {
@@ -140,7 +140,7 @@ class View extends EventEmitter {
         this.s('data-ref', v)
 
         // Add tag.
-        this._e.classList.add(v)
+        this.__e.classList.add(v)
 
         this._ref = v
     }
@@ -150,34 +150,34 @@ class View extends EventEmitter {
     }
 
     getByRef(ref) {
-        return this._childList ? this._childList.getByRef(ref) : undefined
+        return this.__childList ? this.__childList.getByRef(ref) : undefined
     }
 
     get parent() {
-        return this._e.parentNode ? this._e.parentNode.__view : null
+        return this.__e.parentNode ? this.__e.parentNode.__view : null
     }
 
     set text(t) {
         // This property is not allowed together with children.
-        if (this._childList) this._childList.clear()
+        if (this.__childList) this.__childList.clear()
         if (this.e.firstChild) {
             this.e.removeChild(this.e.firstChild)
         }
         this.e.appendChild(document.createTextNode(t))
-        this._textMode = true
-        this._childList = undefined
+        this.__textMode = true
+        this.__childList = undefined
     }
 
     get childList() {
-        if (this._textMode) {
+        if (this.__textMode) {
             this.e.removeChild(this.e.firstChild)
-            this._textMode = false
+            this.__textMode = false
         }
 
-        if (!this._childList) {
-            this._childList = new ViewChildList(this)
+        if (!this.__childList) {
+            this.__childList = new ViewChildList(this)
         }
-        return this._childList
+        return this.__childList
     }
 
     get children() {
@@ -408,10 +408,10 @@ class View extends EventEmitter {
     getDepth() {
         let depth = 0;
 
-        let p = this._parent;
+        let p = this.__parent;
         while(p) {
             depth++;
-            p = p._parent;
+            p = p.__parent;
         }
 
         return depth;
@@ -419,8 +419,8 @@ class View extends EventEmitter {
 
     getAncestor(l) {
         let p = this;
-        while (l > 0 && p._parent) {
-            p = p._parent;
+        while (l > 0 && p.__parent) {
+            p = p.__parent;
             l--;
         }
         return p;
@@ -460,8 +460,8 @@ class View extends EventEmitter {
                 return o1;
             }
 
-            o1 = o1._parent;
-            o2 = o2._parent;
+            o1 = o1.__parent;
+            o2 = o2.__parent;
         } while (o1 && o2);
 
         return null;
@@ -477,7 +477,7 @@ class View extends EventEmitter {
         } else if (localTags.length) {
             str += ":[" + i + "]" + localTags.join(",")
         } else {
-            str += ":[" + i + "]#" + this._id
+            str += ":[" + i + "]#" + this.__id
         }
         return str
     }
@@ -487,27 +487,27 @@ class View extends EventEmitter {
     }
 
     get id() {
-        return this._e.id
+        return this.__e.id
     }
 
     set id(v) {
-        this._e.id = v
+        this.__e.id = v
     }
 
     get e() {
-        return this._e
+        return this.__e
     }
 
     g(prop) {
-        return this._e.getAttribute(prop)
+        return this.__e.getAttribute(prop)
     }
 
     s(prop, value) {
-        this._e.setAttribute(prop, value)
+        this.__e.setAttribute(prop, value)
     }
 
     get $() {
-        return this._e.style
+        return this.__e.style
     }
 
     get alpha() {
@@ -529,30 +529,30 @@ class View extends EventEmitter {
     }
     
     get pivotX() {
-        return this._pivotX
+        return this.__pivotX
     }
 
     get pivotY() {
-        return this._pivotY
+        return this.__pivotY
     }
 
     set pivotX(v) {
-        this._pivotX = v
+        this.__pivotX = v
         this._updateTransformOrigin()
     }
 
     set pivotY(v) {
-        this._pivotY = v
+        this.__pivotY = v
         this._updateTransformOrigin()
     }
 
     get pivot() {
-        return this._pivotX
+        return this.__pivotX
     }
 
     set pivot(v) {
-        this._pivotX = v
-        this._pivotY = v
+        this.__pivotX = v
+        this.__pivotY = v
         this._updateTransformOrigin()
     }
 
@@ -643,7 +643,7 @@ class View extends EventEmitter {
 
     removeTag(v) {
         const acc = v.split(' ')
-        this._e.classList.remove(...acc)
+        this.__e.classList.remove(...acc)
     }
 
     addTag(v) {
@@ -654,11 +654,11 @@ class View extends EventEmitter {
         }
 
         const acc = v.split(' ')
-        this._e.classList.add(...acc)
+        this.__e.classList.add(...acc)
     }
 
     hasTag(v) {
-        return this._e.classList.contains(v)
+        return this.__e.classList.contains(v)
     }
 
     _tag(tag) {
@@ -679,7 +679,7 @@ class View extends EventEmitter {
     }
 
     getTags() {
-        return this._e.className.split(" ")
+        return this.__e.className.split(" ")
     }
 
     set tags(v) {
@@ -693,11 +693,11 @@ class View extends EventEmitter {
             if (trid) {
                 this._clearTagRec('_R' + trid)
             }
-            this._tagRootId = v ? this._id : undefined
+            this._tagRootId = v ? this.__id : undefined
 
             if (this.tagRootId) {
-                if (this._childList) {
-                    let children = this._childList.get();
+                if (this.__childList) {
+                    let children = this.__childList.get();
                     if (children) {
                         let m = children.length;
                         for (let i = 0; i < m; i++) {
@@ -714,14 +714,14 @@ class View extends EventEmitter {
     }
 
     get tagRootId() {
-        return this._tagRootId || (this._parent ? this._parent.tagRootId : 0)
+        return this._tagRootId || (this.__parent ? this.__parent.tagRootId : 0)
     }
 
     _clearTagRec(tag) {
         if (this.hasTag(tag)) {
             this.removeTag(tag)
-            if (this._childList) {
-                let children = this._childList.get();
+            if (this.__childList) {
+                let children = this.__childList.get();
                 if (children) {
                     let m = children.length;
                     for (let i = 0; i < m; i++) {
@@ -735,8 +735,8 @@ class View extends EventEmitter {
     _setTagRec(tag) {
         this.addTag(tag)
         if (!this.tagRoot) {
-            if (this._childList) {
-                let children = this._childList.get();
+            if (this.__childList) {
+                let children = this.__childList.get();
                 if (children) {
                     let m = children.length;
                     for (let i = 0; i < m; i++) {
@@ -760,26 +760,26 @@ class View extends EventEmitter {
 
     setTags(tags) {
 
-        this._e.className = ""
+        this.__e.className = ""
 
         const list = tags.reduce((acc, tag) => {
             return acc.concat(tag.split(' '))
         }, [])
 
-        this._e.classList.add(...list)
+        this.__e.classList.add(...list)
     }
 
     _updateTransformOrigin() {
-        this.$.transformOrigin = (this._pivotX * 100) + '% '  + (this._pivotY * 100) + '%';
+        this.$.transformOrigin = (this.__pivotX * 100) + '% '  + (this.__pivotY * 100) + '%';
     }
 
     _updateTransform() {
         const parts = [];
-        const ids = Object.keys(this._transform).map(id => parseFloat(id)).sort()
+        const ids = Object.keys(this.__transform).map(id => parseFloat(id)).sort()
         ids.forEach((id) => {
-            const names = Object.keys(this._transform[id])
+            const names = Object.keys(this.__transform[id])
             names.forEach(names, (name) => {
-                parts.push(name + '(' + this._transform[id][name] + ')')
+                parts.push(name + '(' + this.__transform[id][name] + ')')
             })
         })
         this.$.transform = parts.join(' ');
@@ -905,31 +905,11 @@ class View extends EventEmitter {
         return t
     }
 
-    onE(event, listener) {
-        this.e.addEventListener(event, listener)
-    }
-
-    offE(event, listener) {
-        this.e.removeEventListener(event, listener)
-    }
-
-    fireOnE(event, fireEvent) {
-        return this.onE(event, function(...args) {
-            this.fire(fireEvent, args)
-        })
-    }
-
-    fireOn(event, fireEvent) {
-        return this.on(event, function(...args) {
-            this.fire(fireEvent, args)
-        })
-    }
-
     get emitHtmlEvent() {
-        if (!this._emitHtmlEvent) {
-            this._emitHtmlEvent = {}
+        if (!this.__emitHtmlEvent) {
+            this.__emitHtmlEvent = {}
         }
-        return this._emitHtmlEvent
+        return this.__emitHtmlEvent
     }
     
     set emitHtmlEvent(obj) {
@@ -956,7 +936,7 @@ class View extends EventEmitter {
                 delete this.emitHtmlEvent[name]
             } else {
                 const listener = (e) => {
-                    Component.getComponent(this).emit(target, {event: e, view: this})
+                    Component.getComponent(this).fire(target, {event: e, view: this})
                 }
                 listener.target = target
                 this.e.addEventListener(name, listener)

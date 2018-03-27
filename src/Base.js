@@ -1,3 +1,6 @@
+/**
+ * Copyright Metrological, 2017
+ */
 class Base {
 
     static defaultSetter(obj, name, value) {
@@ -16,7 +19,6 @@ class Base {
             }
         }
     }
-
 
     static patchObjectProperty(obj, name, value) {
         let setter = obj.setSetting || Base.defaultSetter;

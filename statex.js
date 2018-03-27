@@ -638,6 +638,9 @@ class StageUtils {
     };
 }
 
+/**
+ * Copyright Metrological, 2017
+ */
 class Base {
 
     static defaultSetter(obj, name, value) {
@@ -656,7 +659,6 @@ class Base {
             }
         }
     }
-
 
     static patchObjectProperty(obj, name, value) {
         let setter = obj.setSetting || Base.defaultSetter;
@@ -681,30 +683,61 @@ class Base {
     }
 
 }
-
 class Stage extends EventEmitter {
 
     constructor(document, options = {}) {
         super()
+        this._setOptions(options);
+
         this.document = document
-        this.options = options
 
         this.transitions = new TransitionManager(this);
         this.animations = new AnimationManager(this);
 
-        this._root = new View(this)
-        this._root.setAsRoot()
+        this.__looping = false
+    }
 
-        this._looping = false
+    destroy() {
+        this._stopLoop()
+        this._destroyed = true;
+    }
+
+    getOption(name) {
+        return this._options[name]
+    }
+
+    _setOptions(o) {
+        this._options = {};
+
+        let opt = (name, def) => {
+            let value = o[name];
+
+            if (value === undefined) {
+                this._options[name] = def;
+            } else {
+                this._options[name] = value;
+            }
+        }
+
+        opt('fixedDt', undefined);
+    }
+
+    setApplication(app) {
+        this.application = app
+    }
+
+    init() {
+        this.application.setAsRoot();
+        this._startLoop()
     }
 
     get root() {
-        return this._root
+        return this.application
     }
 
     drawFrame() {
-        if (this.options.fixedDt) {
-            this.dt = this.options.fixedDt;
+        if (this.getOption('fixedDt')) {
+            this.dt = this.getOption('fixedDt');
         } else {
             this.dt = (!this.startTime) ? .02 : .001 * (this.currentTime - this.startTime);
         }
@@ -715,20 +748,20 @@ class Stage extends EventEmitter {
     }
 
     _startLoop() {
-        this._looping = true;
+        this.__looping = true;
         if (!this._awaitingLoop) {
             this._loop();
         }
     }
 
     _stopLoop() {
-        this._looping = false;
+        this.__looping = false;
     }
 
     _loop() {
         let lp = () => {
             this._awaitingLoop = false;
-            if (this._looping) {
+            if (this.__looping) {
                 this.drawFrame();
 
                 if (this.transitions.active.size || this.animations.active.size) {
@@ -736,7 +769,7 @@ class Stage extends EventEmitter {
                     this._awaitingLoop = true;
                 } else {
                     // Stop looping until animations are added.
-                    this._looping = false
+                    this.__looping = false
                 }
             }
         }
@@ -757,18 +790,18 @@ class View extends EventEmitter {
     constructor(stage, type = 'div') {
         super()
         this.stage = stage
-        this._id = ++View.id
-        this._e = this.stage.document.createElement(type)
-        this._e.__view = this
-        this._pivotX = 0.5
-        this._pivotY = 0.5
-        this._active = false
-        this._attached = false
-        this._parent = null
-        this._textMode = false
-        this._childList = undefined
-        this._transform = undefined
-        this._emitHtmlEvent = undefined
+        this.__id = ++View.id
+        this.__e = this.stage.document.createElement(type)
+        this.__e.__view = this
+        this.__pivotX = 0.5
+        this.__pivotY = 0.5
+        this.__active = false
+        this.__attached = false
+        this.__parent = null
+        this.__textMode = false
+        this.__childList = undefined
+        this.__transform = undefined
+        this.__emitHtmlEvent = undefined
     }
 
     setAsRoot() {
@@ -778,11 +811,11 @@ class View extends EventEmitter {
     }
 
     _updateParent() {
-        const newParent = this._e.parentNode ? this._e.parentNode.__view : null
-        const oldTagRootId = this._parent ? this._parent.tagRootId : 0
+        const newParent = this.__e.parentNode ? this.__e.parentNode.__view : null
+        const oldTagRootId = this.__parent ? this.__parent.tagRootId : 0
         const newTagRootId = newParent ? newParent.tagRootId : 0
 
-        this._parent = newParent
+        this.__parent = newParent
         this._updateAttached()
         this._updateActive()
 
@@ -798,11 +831,11 @@ class View extends EventEmitter {
 
     _updateAttached() {
         const newAttached = this.isAttached()
-        if (this._attached !== newAttached) {
-            this._attached = newAttached
+        if (this.__attached !== newAttached) {
+            this.__attached = newAttached
 
-            if (this._childList) {
-                let children = this._childList.get();
+            if (this.__childList) {
+                let children = this.__childList.get();
                 if (children) {
                     let m = children.length;
                     if (m > 0) {
@@ -819,20 +852,20 @@ class View extends EventEmitter {
 
     _updateActive() {
         const newActive = this.isActive()
-        if (this._active !== newActive) {
+        if (this.__active !== newActive) {
             this.emit(newActive ? 'active' : 'inactive')
             this.emit(newActive ? 'enable' : 'disable')
-            this._active = newActive
+            this.__active = newActive
         }
     }
 
     // We don't have 'within bounds' support so we bundle active/enabled events.
     isAttached() {
-        return (this._parent ? this._parent._attached : (this.stage.root === this))
+        return (this.__parent ? this.__parent.__attached : (this.stage.root === this))
     }
 
     isActive() {
-        return this.isVisible() && (this._parent ? this._parent._active : (this.stage.root === this));
+        return this.isVisible() && (this.__parent ? this.__parent.__active : (this.stage.root === this));
     }
 
     isVisible() {
@@ -860,11 +893,11 @@ class View extends EventEmitter {
     }
 
     get transform() {
-        if (!this._transform) {
-            this._transform = new ViewTransforms(this)
+        if (!this.__transform) {
+            this.__transform = new ViewTransforms(this)
         }
 
-        return this._transform
+        return this.__transform
     }
 
     set transform(settings) {
@@ -894,7 +927,7 @@ class View extends EventEmitter {
         this.s('data-ref', v)
 
         // Add tag.
-        this._e.classList.add(v)
+        this.__e.classList.add(v)
 
         this._ref = v
     }
@@ -904,34 +937,34 @@ class View extends EventEmitter {
     }
 
     getByRef(ref) {
-        return this._childList ? this._childList.getByRef(ref) : undefined
+        return this.__childList ? this.__childList.getByRef(ref) : undefined
     }
 
     get parent() {
-        return this._e.parentNode ? this._e.parentNode.__view : null
+        return this.__e.parentNode ? this.__e.parentNode.__view : null
     }
 
     set text(t) {
         // This property is not allowed together with children.
-        if (this._childList) this._childList.clear()
+        if (this.__childList) this.__childList.clear()
         if (this.e.firstChild) {
             this.e.removeChild(this.e.firstChild)
         }
         this.e.appendChild(document.createTextNode(t))
-        this._textMode = true
-        this._childList = undefined
+        this.__textMode = true
+        this.__childList = undefined
     }
 
     get childList() {
-        if (this._textMode) {
+        if (this.__textMode) {
             this.e.removeChild(this.e.firstChild)
-            this._textMode = false
+            this.__textMode = false
         }
 
-        if (!this._childList) {
-            this._childList = new ViewChildList(this)
+        if (!this.__childList) {
+            this.__childList = new ViewChildList(this)
         }
-        return this._childList
+        return this.__childList
     }
 
     get children() {
@@ -1059,8 +1092,7 @@ class View extends EventEmitter {
         let arrowIdx = path.indexOf(">")
         if (pointIdx === -1 && arrowIdx === -1) {
             // Quick case.
-            const firstChar = path.charAt(0)
-            if (Utils.isUcChar(firstChar)) {
+            if (Utils.isUcChar(path.charCodeAt(0))) {
                 const ref = this.getByRef(path)
                 return ref ? [ref] : []
             } else {
@@ -1163,10 +1195,10 @@ class View extends EventEmitter {
     getDepth() {
         let depth = 0;
 
-        let p = this._parent;
+        let p = this.__parent;
         while(p) {
             depth++;
-            p = p._parent;
+            p = p.__parent;
         }
 
         return depth;
@@ -1174,8 +1206,8 @@ class View extends EventEmitter {
 
     getAncestor(l) {
         let p = this;
-        while (l > 0 && p._parent) {
-            p = p._parent;
+        while (l > 0 && p.__parent) {
+            p = p.__parent;
             l--;
         }
         return p;
@@ -1215,8 +1247,8 @@ class View extends EventEmitter {
                 return o1;
             }
 
-            o1 = o1._parent;
-            o2 = o2._parent;
+            o1 = o1.__parent;
+            o2 = o2.__parent;
         } while (o1 && o2);
 
         return null;
@@ -1232,7 +1264,7 @@ class View extends EventEmitter {
         } else if (localTags.length) {
             str += ":[" + i + "]" + localTags.join(",")
         } else {
-            str += ":[" + i + "]#" + this._id
+            str += ":[" + i + "]#" + this.__id
         }
         return str
     }
@@ -1242,11 +1274,11 @@ class View extends EventEmitter {
     }
 
     get id() {
-        return this._e.id
+        return this.__e.id
     }
 
     set id(v) {
-        this._e.id = v
+        this.__e.id = v
     }
 
     get e() {
@@ -1254,15 +1286,15 @@ class View extends EventEmitter {
     }
 
     g(prop) {
-        return this._e.getAttribute(prop)
+        return this.__e.getAttribute(prop)
     }
 
     s(prop, value) {
-        this._e.setAttribute(prop, value)
+        this.__e.setAttribute(prop, value)
     }
 
     get $() {
-        return this._e.style
+        return this.__e.style
     }
 
     get alpha() {
@@ -1284,30 +1316,30 @@ class View extends EventEmitter {
     }
     
     get pivotX() {
-        return this._pivotX
+        return this.__pivotX
     }
 
     get pivotY() {
-        return this._pivotY
+        return this.__pivotY
     }
 
     set pivotX(v) {
-        this._pivotX = v
+        this.__pivotX = v
         this._updateTransformOrigin()
     }
 
     set pivotY(v) {
-        this._pivotY = v
+        this.__pivotY = v
         this._updateTransformOrigin()
     }
 
     get pivot() {
-        return this._pivotX
+        return this.__pivotX
     }
 
     set pivot(v) {
-        this._pivotX = v
-        this._pivotY = v
+        this.__pivotX = v
+        this.__pivotY = v
         this._updateTransformOrigin()
     }
 
@@ -1398,7 +1430,7 @@ class View extends EventEmitter {
 
     removeTag(v) {
         const acc = v.split(' ')
-        this._e.classList.remove(...acc)
+        this.__e.classList.remove(...acc)
     }
 
     addTag(v) {
@@ -1409,11 +1441,11 @@ class View extends EventEmitter {
         }
 
         const acc = v.split(' ')
-        this._e.classList.add(...acc)
+        this.__e.classList.add(...acc)
     }
 
     hasTag(v) {
-        return this._e.classList.contains(v)
+        return this.__e.classList.contains(v)
     }
 
     _tag(tag) {
@@ -1434,7 +1466,7 @@ class View extends EventEmitter {
     }
 
     getTags() {
-        return this._e.className.split(" ")
+        return this.__e.className.split(" ")
     }
 
     set tags(v) {
@@ -1448,11 +1480,11 @@ class View extends EventEmitter {
             if (trid) {
                 this._clearTagRec('_R' + trid)
             }
-            this._tagRootId = v ? this._id : undefined
+            this._tagRootId = v ? this.__id : undefined
 
             if (this.tagRootId) {
-                if (this._childList) {
-                    let children = this._childList.get();
+                if (this.__childList) {
+                    let children = this.__childList.get();
                     if (children) {
                         let m = children.length;
                         for (let i = 0; i < m; i++) {
@@ -1469,14 +1501,14 @@ class View extends EventEmitter {
     }
 
     get tagRootId() {
-        return this._tagRootId || (this._parent ? this._parent.tagRootId : 0)
+        return this._tagRootId || (this.__parent ? this.__parent.tagRootId : 0)
     }
 
     _clearTagRec(tag) {
         if (this.hasTag(tag)) {
             this.removeTag(tag)
-            if (this._childList) {
-                let children = this._childList.get();
+            if (this.__childList) {
+                let children = this.__childList.get();
                 if (children) {
                     let m = children.length;
                     for (let i = 0; i < m; i++) {
@@ -1490,8 +1522,8 @@ class View extends EventEmitter {
     _setTagRec(tag) {
         this.addTag(tag)
         if (!this.tagRoot) {
-            if (this._childList) {
-                let children = this._childList.get();
+            if (this.__childList) {
+                let children = this.__childList.get();
                 if (children) {
                     let m = children.length;
                     for (let i = 0; i < m; i++) {
@@ -1515,26 +1547,26 @@ class View extends EventEmitter {
 
     setTags(tags) {
 
-        this._e.className = ""
+        this.__e.className = ""
 
         const list = tags.reduce((acc, tag) => {
             return acc.concat(tag.split(' '))
         }, [])
 
-        this._e.classList.add(...list)
+        this.__e.classList.add(...list)
     }
 
     _updateTransformOrigin() {
-        this.$.transformOrigin = (this._pivotX * 100) + '% '  + (this._pivotY * 100) + '%';
+        this.$.transformOrigin = (this.__pivotX * 100) + '% '  + (this.__pivotY * 100) + '%';
     }
 
     _updateTransform() {
         const parts = [];
-        const ids = Object.keys(this._transform).map(id => parseFloat(id)).sort()
+        const ids = Object.keys(this.__transform).map(id => parseFloat(id)).sort()
         ids.forEach((id) => {
-            const names = Object.keys(this._transform[id])
+            const names = Object.keys(this.__transform[id])
             names.forEach(names, (name) => {
-                parts.push(name + '(' + this._transform[id][name] + ')')
+                parts.push(name + '(' + this.__transform[id][name] + ')')
             })
         })
         this.$.transform = parts.join(' ');
@@ -1660,31 +1692,11 @@ class View extends EventEmitter {
         return t
     }
 
-    onE(event, listener) {
-        this.e.addEventListener(event, listener)
-    }
-
-    offE(event, listener) {
-        this.e.removeEventListener(event, listener)
-    }
-
-    fireOnE(event, fireEvent) {
-        return this.onE(event, function(...args) {
-            this.fire(fireEvent, args)
-        })
-    }
-
-    fireOn(event, fireEvent) {
-        return this.on(event, function(...args) {
-            this.fire(fireEvent, args)
-        })
-    }
-
     get emitHtmlEvent() {
-        if (!this._emitHtmlEvent) {
-            this._emitHtmlEvent = {}
+        if (!this.__emitHtmlEvent) {
+            this.__emitHtmlEvent = {}
         }
-        return this._emitHtmlEvent
+        return this.__emitHtmlEvent
     }
     
     set emitHtmlEvent(obj) {
@@ -1711,7 +1723,7 @@ class View extends EventEmitter {
                 delete this.emitHtmlEvent[name]
             } else {
                 const listener = (e) => {
-                    Component.getComponent(this).emit(target, {event: e, view: this})
+                    Component.getComponent(this).fire(target, {event: e, view: this})
                 }
                 listener.target = target
                 this.e.addEventListener(name, listener)
@@ -2493,15 +2505,50 @@ class Component extends View {
 
         this.patch(this._getTemplate(), true)
 
-        this.on('attach', () => this.__attach())
-        this.on('detach', () => this.__detach())
-        this.on('active', () => this.__active())
-        this.on('inactive', () => this.__inactive())
-        this.on('enabled', () => this.__enable())
-        this.on('disable', () => this.__disable())
+        this._registerLifecycleListeners()
 
-        this._passEmit = undefined
-        this._passEmitFire = undefined
+        this.__signals = undefined
+    }
+
+    _registerLifecycleListeners() {
+        this.on('attach', () => {
+            if (!this.__initialized) {
+                this.__init()
+                this.__initialized = true
+            }
+
+            this.fire('_attach')
+        })
+
+        this.on('detach', () => {
+            this.fire('_detach')
+        })
+
+        this.on('active', () => {
+            if (!this.__firstActive) {
+                this.fire('_firstActive')
+                this.__firstActive = true
+            }
+
+            this.fire('_active')
+        })
+
+        this.on('inactive', () => {
+            this.fire('_inactive')
+        })
+
+        this.on('enabled', () => {
+            if (!this.__firstEnable) {
+                this.fire('_firstEnable')
+                this.__firstEnable = true
+            }
+
+            this.fire('_enable')
+        })
+
+        this.on('disable', () => {
+            this.fire('_disable')
+        })
     }
 
     get application() {
@@ -2513,97 +2560,34 @@ class Component extends View {
     }
 
     __construct() {
-        this.fire('construct')
-    }
-
-    __attach() {
-        if (!this.__initialized) {
-            this.__init()
-            this.__initialized = true
-        }
-        
-        this.fire('attach')
+        this.fire('_construct')
     }
 
     __init() {
-        this.fire('init')
-    }
-
-    __detach() {
-        this.fire('detach')
-    }
-
-    __active() {
-        if (!this.__firstActive) {
-            this.fire('firstActive')
-            this.__firstActive = true
-        }
-
-        this.fire('active')
-    }
-
-    __inactive() {
-        this.fire('inactive')
-    }
-
-    __enable() {
-        if (!this.__firstEnable) {
-            this.fire('firstEnable')
-            this.__firstEnable = true
-        }
-
-        this.fire('enable')
-    }
-
-    __disable() {
-        this.fire('disable')
+        this.fire('_init')
     }
 
     __focus(newTarget, prevTarget) {
-        this.fire('focus', {newTarget: newTarget, prevTarget: prevTarget})
+        this.fire('_focus', {newTarget: newTarget, prevTarget: prevTarget})
     }
 
     __unfocus(newTarget) {
-        this.fire('unfocus', newTarget)
+        this.fire('_unfocus', {newTarget: newTarget})
     }
 
     __focusBranch(target) {
-        this.fire('focusBranch', target)
+        this.fire('_focusBranch', {target: target})
     }
 
     __unfocusBranch(target, newTarget) {
-        this.fire('focusBranch', {target:target, newTarget:newTarget})
+        this.fire('_focusBranch', {target:target, newTarget:newTarget})
     }
 
     __focusChange(target, newTarget) {
-        this.fire('focusChange', {target:target, newTarget:newTarget})
+        this.fire('_focusChange', {target:target, newTarget:newTarget})
     }
 
-    __captureKey(e) {
-        if (Component.KEYS_EVENTS_NAMES[e.keyCode]) {
-            return this.fire([{event: "capture" + Component.KEYS_EVENTS_NAMES[e.keyCode]}, {event: "captureKey", args: {keyCode: e.keyCode}}])
-        } else {
-            return this.fire('captureKey', {keyCode: e.keyCode})
-        }
-    }
-
-    __notifyKey(e) {
-        if (Component.KEYS_EVENTS_NAMES[e.keyCode]) {
-            return this.fire([{event: "notify" + Component.KEYS_EVENTS_NAMES[e.keyCode]}, {event: "notifyKey", args: {keyCode: e.keyCode}}])
-        } else {
-            return this.fire('notifyKey', {keyCode: e.keyCode})
-        }
-    }
-
-    __handleKey(e) {
-        if (Component.KEYS_EVENTS_NAMES[e.keyCode]) {
-            return this.fire([{event: "handle" + Component.KEYS_EVENTS_NAMES[e.keyCode]}, {event: "handleKey", args: {keyCode: e.keyCode}}])
-        } else {
-            return this.fire('handleKey', {keyCode: e.keyCode})
-        }
-    }
-
-    _getFocus() {
+    _getFocused() {
         // Override to delegate focus to child components.
         return this
     }
@@ -2611,6 +2595,9 @@ class Component extends View {
     _getStates() {
         if (!this.constructor.__states) {
             this.constructor.__states = this.constructor._states()
+            if (!Utils.isObjectLiteral(this.constructor.__states)) {
+                this._throwError("States object empty")
+            }
         }
         return this.constructor.__states
     }
@@ -2622,6 +2609,9 @@ class Component extends View {
     _getTemplate() {
         if (!this.constructor.__template) {
             this.constructor.__template = this.constructor._template()
+            if (!Utils.isObjectLiteral(this.constructor.__template)) {
+                this._throwError("Template object empty")
+            }
         }
         return this.constructor.__template
     }
@@ -2641,11 +2631,7 @@ class Component extends View {
     }
 
     get cparent() {
-        let parent = this.parent
-        while (parent && !parent.isComponent) {
-            parent = parent.parent
-        }
-        return parent
+        return Component.getParent(this)
     }
 
     getSharedAncestorComponent(view) {
@@ -2659,107 +2645,131 @@ class Component extends View {
     /**
      * Fires the specified event on the state machine.
      * @param event
-     * @param args
+     * @param {object} args
      * @return {boolean}
      *   True iff the state machine could find and execute a handler for the event (event and condition matched).
      */
-    fire(event, args) {
+    fire(event, args = {}) {
+        if (!Utils.isObjectLiteral(args)) {
+            this._throwError("Fire: args must be object")
+        }
         return this.application.stateManager.fire(this, event, args)
     }
 
     /**
-     * Broadcasts the specified event upwards, where it is emitted on every single component locally.
-     * @param event
-     * @param args
-     * @private
+     * Signals the parent of the specified event.
+     * A parent/ancestor that wishes to handle the signal should set the 'signals' property on this component.
+     * @param {string} event
+     * @param {object} args
+     * @param {boolean} bubble
      */
-    broadcast(event, args) {
-        let current = this
-        do {
-            current.emit(event, args)
-            current = current.cparent
-        } while(current)
-    }
-
-    get passEmit() {
-        if (!this._passEmit) {
-            this._passEmit = {}
-        }
-        return this._passEmit
-    }
-
-    set passEmit(obj) {
-        let isArray = Array.isArray(obj)
-        let events
-        if (isArray) {
-            events = obj
-        } else {
-            events = Object.keys(obj)
+    signal(event, args = {}, bubble = false) {
+        if (!Utils.isObjectLiteral(args)) {
+            this._throwError("Signal: args must be object")
         }
 
-        events.forEach(name => {
-            const target = isArray ? name : obj[name]
-            if (this.passEmit[name] && this.passEmit[name].target === name) {
-                // Skip.
+        if (!args._source) {
+            args = Object.assign({_source: this}, args)
+        }
+
+        if (this.__signals && this.cparent) {
+            let fireEvent = this.__signals[event]
+            if (fireEvent === false) {
+                // Ignore event, even when bubbling.
                 return
             }
-
-            if (this.passEmit[name]) {
-                this.off(this.passEmit[name])
-            }
-
-            if (!target) {
-                delete this.passEmit[name]
-            } else {
-                const listener = (e) => {
-                    Component.getParent(this).emit(target, e)
+            if (fireEvent) {
+                if (fireEvent === true) {
+                    fireEvent = event
                 }
-                listener.target = target
-                this.on(name, listener)
-                this.passEmit[name] = listener
+
+                const handled = this.cparent.fire(fireEvent, args)
+                if (handled) return
             }
-        })
+        }
+        if (bubble && this.cparent) {
+            // Bubble up.
+            this.cparent.signal(event, args, bubble)
+        }
     }
 
-    get passEmitFire() {
-        if (!this._passEmitFire) {
-            this._passEmitFire = {}
-        }
-        return this._passEmitFire
+    get signals() {
+        return this.__signals
     }
 
-    set passEmitFire(obj) {
-        let isArray = Array.isArray(obj)
-        let events
-        if (isArray) {
-            events = obj
-        } else {
-            events = Object.keys(obj)
+    set signals(v) {
+        if (!Utils.isObjectLiteral(v)) {
+            this._throwError("Signals: specify an object with signal-to-fire mappings")
+        }
+        this.__signals = Object.assign(this.__signals || {}, v)
+    }
+
+    /**
+     * Fires the specified event downwards.
+     * A descendant that wishes to handle the signal should set the '_broadcasts' property on this component.
+     * @warn handling a broadcast will stop it from propagating; to continue propagation return false from the state
+     * event handler.
+     */
+    broadcast(event, args = {}) {
+        if (!Utils.isObjectLiteral(args)) {
+            this._throwError("Broadcast: args must be object")
         }
 
-        events.forEach(name => {
-            const target = isArray ? name : obj[name]
-            if (this.passEmitFire[name] && this.passEmitFire[name].target === name) {
-                // Skip.
+        if (!args._source) {
+            args = Object.assign({_source: this}, args)
+        }
+
+        if (this.__broadcasts) {
+            let fireEvent = this.__broadcasts[event]
+            if (fireEvent === false) {
                 return
             }
-
-            if (this.passEmitFire[name]) {
-                this.off(this.passEmitFire[name])
-            }
-
-            if (!target) {
-                delete this.passEmitFire[name]
-            } else {
-                const listener = (e) => {
-                    Component.getParent(this).fire(target, e)
+            if (fireEvent) {
+                if (fireEvent === true) {
+                    fireEvent = event
                 }
-                listener.target = target
-                this.on(name, listener)
-                this.passEmitFire[name] = listener
+
+                const handled = this.fire(fireEvent, args)
+                if (handled) {
+                    // Skip propagation
+                    return
+                }
             }
-        })
-    }    
+        }
+
+        // Propagate down.
+        const subs = []
+        Component.collectSubComponents(subs, this)
+        for (let i = 0, n = subs.length; i < n; i++) {
+            subs[i].broadcast(event, args)
+        }
+    }
+
+    static collectSubComponents(subs, view) {
+        if (view.hasChildren()) {
+            // We must use the private property because direct children access may be disallowed.
+            const childList = view.__childList
+            for (let i = 0, n = childList.length; i < n; i++) {
+                const child = childList.getAt(i)
+                if (child.isComponent) {
+                    subs.push(child)
+                } else {
+                    Component.collectSubComponents(subs, child)
+                }
+            }
+        }
+    }
+
+    get _broadcasts() {
+        return this.__broadcasts
+    }
+
+    set _broadcasts(v) {
+        if (!Utils.isObjectLiteral(v)) {
+            this._throwError("Broadcasts: specify an object with broadcast-to-fire mappings")
+        }
+        this.__broadcasts = Object.assign(this.__broadcasts || {}, v)
+    }
 
     static getComponent(view) {
         let parent = view
@@ -2777,41 +2787,57 @@ class Component extends View {
 
 Component.prototype.isComponent = true
 
-Component.KEYS = {
-    UP: 38,
-    DOWN: 40,
-    LEFT: 37,
-    RIGHT: 39,
-    ENTER: 13,
-    // BACK: 27,
-    // RCBACK: 166,
-    KEY_S: 82
-};
-
-Component.KEYS_EVENTS_NAMES = {
-    38: "Up",
-    40: "Down",
-    37: "Left",
-    39: "Right",
-    13: "Enter",
-    // 27: "Back",
-    9: "Back",
-    8: "Back",
-    93: "Back",
-    174: "Back",
-    175: "Menu",
-    // 166: "Back",
-    83: "Search"
-};
-
-
 class Application extends Component {
 
-    __construct() {
-        this.stateManager = new StateManager()
-        this.stateManager.debug = this.debug
+    constructor(options = {}, properties) {
+        // Save options temporarily to avoid having to pass it through the constructor.
+        Application._temp_options = options
 
-        this.stage.application = this
+        const stage = new Stage(options.stage)
+        super(stage, properties)
+
+        // We must construct while the application is not yet attached.
+        // That's why we 'init' the stage later (which actually emits the attach event).
+        this.stage.init()
+
+        this.__keymap = this.getOption('keys')
+        if (this.__keymap) {
+            window.addEventListener('keydown', e => {
+                this._receiveKeydown(e)
+            })
+        }
+    }
+
+    getOption(name) {
+        return this.__options[name]
+    }
+
+    _setOptions(o) {
+        this.__options = {};
+
+        let opt = (name, def) => {
+            let value = o[name];
+
+            if (value === undefined) {
+                this.__options[name] = def;
+            } else {
+                this.__options[name] = value;
+            }
+        }
+
+        opt('debug', false);
+        opt('keys', false);
+    }
+
+    __construct() {
+        this.stage.setApplication(this)
+
+        this._setOptions(Application._temp_options)
+        delete Application._temp_options
+
+        // We must create the state manager before the first 'fire' ever: the 'construct' event.
+        this.stateManager = new StateManager()
+        this.stateManager.debug = this.__options.debug
 
         super.__construct()
     }
@@ -2819,10 +2845,6 @@ class Application extends Component {
     __init() {
         super.__init()
         this.__updateFocus()
-    }
-
-    __attach() {
-        super.__attach()
     }
 
     __updateFocus(maxRecursion = 100) {
@@ -2848,7 +2870,7 @@ class Application extends Component {
             }
 
             if (this._focusPath.length !== newFocusPath.length || index !== newFocusPath.length) {
-                if (this._debug) {
+                if (this.debug) {
                     console.log(this.stateManager._logPrefix + '* FOCUS ' + newFocusedComponent.getLocationString())
                 }
                 // Unfocus events.
@@ -2879,18 +2901,34 @@ class Application extends Component {
     }
 
     __getFocusPath() {
-        const path = []
+        const path = [this]
         let current = this
         do {
-            path.push(current)
-            const nextFocus = current._getFocus()
+            const nextFocus = current._getFocused()
             if (!nextFocus || (nextFocus === current)) {
                 // Found!
                 break
             }
 
-            if (nextFocus.cparent !== current) {
-                current._throwError("Return value for _getFocus must be an attached child component but its '" + nextFocus.getLocationString() + "'")
+
+            let ptr = nextFocus.cparent
+            if (ptr === current) {
+                path.push(nextFocus)
+            } else {
+                // Not an immediate child: include full path to descendant.
+                const newParts = [nextFocus]
+                do {
+                    newParts.push(ptr)
+                    ptr = ptr.cparent
+                    if (!ptr) {
+                        current._throwError("Return value for _getFocus must be an attached descendant component but its '" + nextFocus.getLocationString() + "'")
+                    }
+                } while (ptr !== current)
+
+                // Add them reversed.
+                for (let i = 0, n = newParts.length; i < n; i++) {
+                    path.push(newParts[n - i - 1])
+                }
             }
 
             current = nextFocus
@@ -2903,31 +2941,64 @@ class Application extends Component {
         return this._focusPath
     }
 
-    receiveKeydown(e) {
+    /**
+     * Injects an event in the state machines, top-down from application to focused component.
+     */
+    focusTopDownEvent(event, args) {
         const path = this.focusPath
         const n = path.length
-        for (let i = 0; i < n; i++) {
-            if (path[i].__captureKey(e)) {
-                return
+        if (Array.isArray(event)) {
+            // Multiple events.
+            for (let i = 0; i < n; i++) {
+                if (path[i].fire(event)) {
+                    return true
+                }
             }
-
-            path[i].__notifyKey(e)
-        }
-        for (let i = n - 1; i >= 0; i--) {
-            if (path[i].__handleKey(e)) {
-                return
+        } else {
+            // Single event.
+            for (let i = 0; i < n; i++) {
+                if (path[i].fire(event, args)) {
+                    return true
+                }
             }
         }
+        return false
     }
 
-    get debug() {
-        return this._debug
+    /**
+     * Injects an event in the state machines, bottom-up from focused component to application.
+     */
+    focusBottomUpEvent(event, args) {
+        const path = this.focusPath
+        const n = path.length
+        if (Array.isArray(event)) {
+            // Multiple events.
+            for (let i = n - 1; i >= 0; i--) {
+                if (path[i].fire(event)) {
+                    return true
+                }
+            }
+        } else {
+            // Single event.
+            for (let i = n - 1; i >= 0; i--) {
+                if (path[i].fire(event, args)) {
+                    return true
+                }
+            }
+        }
+        return false
     }
 
-    set debug(v) {
-        this._debug = v
-        if (this.stateManager) {
-            this.stateManager.debug = true
+    _receiveKeydown(e) {
+        const obj = {keyCode: e.keyCode}
+        if (this.__keymap[e.keyCode]) {
+            if (!this.stage.application.focusTopDownEvent([{event: "_capture" + this.__keymap[e.keyCode]}, {event: "_captureKey", args: obj}])) {
+                this.stage.application.focusBottomUpEvent([{event: "_handle" + this.__keymap[e.keyCode]}, {event: "_handleKey", args: obj}])
+            }
+        } else {
+            if (!this.stage.application.focusTopDownEvent("_captureKey", obj)) {
+                this.stage.application.focusBottomUpEvent("_handleKey", obj)
+            }
         }
     }
 
@@ -3038,7 +3109,7 @@ class StateManager {
                     validAction = (newState !== false)
                     if (!validAction) {
                         if (this.debug) {
-                            console.log(`${this._logPrefix}[CANCELED]`)
+                            console.log(`${this._logPrefix}[PASS THROUGH]`)
                         }
                     }
                 } catch(e) {
@@ -3232,10 +3303,6 @@ class StateManager {
     }
 
 }
-/**
- * Copyright Metrological, 2017
- */
-
 class Animation extends EventEmitter {
 
     constructor(manager, settings, view) {
@@ -3413,15 +3480,9 @@ class Animation extends EventEmitter {
             this.emit('progress', this._p)
         }
     }
-    
+
     _stopProgress(dt) {
         let duration = this._getStopDuration()
-
-        if (this._stopDelayLeft > 0) {
-            // Animation wasn't even started yet: directly finish!
-            this._state = Animation.STATES.STOPPED
-            this.emit('stopFinish')
-        }
 
         if (this._stopDelayLeft > 0) {
             this._stopDelayLeft -= dt
@@ -3505,9 +3566,9 @@ class Animation extends EventEmitter {
                 }
             }
         }
-        
+
     }
-    
+
     _progressStopTransition(dt) {
         if (this._stopP < 1) {
             if (this._stopDelayLeft > 0) {
@@ -3522,7 +3583,7 @@ class Animation extends EventEmitter {
                     return
                 }
             }
-            
+
             const duration = this._getStopDuration()
 
             if (duration == 0) {
@@ -3590,7 +3651,6 @@ Animation.STATES = {
     STOPPED: 3,
     FINISHED: 4
 }
-
 
 /**
  * Copyright Metrological, 2017

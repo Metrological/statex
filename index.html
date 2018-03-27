@@ -73,7 +73,7 @@
 
             static _states() {
                 return {
-                    "init": function() {
+                    "_init": function() {
                         //this.sel(".Label").animation({duration: 5, actions: [{p: 'x', v: {0: 0, 1: 1000}}]}).start()
                         this.sel(".Label").$.opacity = 1
 
@@ -97,18 +97,26 @@
 
         const stage = new Stage(document, {});
 
-        const app = new TestComponent(stage, {debug: true})
-        stage.root.patch({
-            __create: true,
-            App: app
-        })
+        const options = {debug: true}
+        options.keys = {
+            38: "Up",
+            40: "Down",
+            37: "Left",
+            39: "Right",
+            13: "Enter",
+            9: "Back",
+            8: "Back",
+            93: "Back",
+            174: "Back",
+            175: "Menu",
+            83: "Search"
+        };
+
+        const app = new TestComponent(stage, options)
 
         window.app = app
-        window.addEventListener('keydown', e => {
-            app.receiveKeydown(e)
-        })
 
-        document.getElementById('ui').appendChild(stage.root.e)
+        document.getElementById('ui').appendChild(app.stage.root.e)
     }
 </script>
 </body>

@@ -23,7 +23,7 @@ class ViewChildList extends ObjectList {
     }
 
     onSync(removed, added, order) {
-        const e = this._view._e
+        const e = this._view.__e
         if (order.length) {
             for (let i = 0, n = order.length; i < n; i++) {
                 this.e.appendChild(order[i].e)
