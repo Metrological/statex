@@ -1282,7 +1282,7 @@ class View extends EventEmitter {
     }
 
     get e() {
-        return this._e
+        return this.__e
     }
 
     g(prop) {
@@ -2100,7 +2100,7 @@ class ViewChildList extends ObjectList {
     }
 
     onSync(removed, added, order) {
-        const e = this._view._e
+        const e = this._view.__e
         if (order.length) {
             for (let i = 0, n = order.length; i < n; i++) {
                 this.e.appendChild(order[i].e)
@@ -2793,7 +2793,7 @@ class Application extends Component {
         // Save options temporarily to avoid having to pass it through the constructor.
         Application._temp_options = options
 
-        const stage = new Stage(options.stage)
+        const stage = new Stage(window.document, options.stage)
         super(stage, properties)
 
         // We must construct while the application is not yet attached.
