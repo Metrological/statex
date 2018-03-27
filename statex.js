@@ -801,7 +801,8 @@ class View extends EventEmitter {
         this.__textMode = false
         this.__childList = undefined
         this.__transform = undefined
-        this.__emitHtmlEvent = undefined
+        this.__fireHtmlEvent = undefined
+        this.__signalHtmlEvent = undefined
     }
 
     setAsRoot() {
