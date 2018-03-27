@@ -1692,14 +1692,14 @@ class View extends EventEmitter {
         return t
     }
 
-    get emitHtmlEvent() {
-        if (!this.__emitHtmlEvent) {
-            this.__emitHtmlEvent = {}
+    get fireHtmlEvent() {
+        if (!this.__fireHtmlEvent) {
+            this.__fireHtmlEvent = {}
         }
-        return this.__emitHtmlEvent
+        return this.__fireHtmlEvent
     }
-    
-    set emitHtmlEvent(obj) {
+
+    set fireHtmlEvent(obj) {
         let isArray = Array.isArray(obj)
         let events
         if (isArray) {
@@ -1710,24 +1710,64 @@ class View extends EventEmitter {
 
         events.forEach(name => {
             const target = isArray ? name : obj[name]
-            if (this.emitHtmlEvent[name] && this.emitHtmlEvent[name].target === name) {
+            if (this.fireHtmlEvent[name] && this.fireHtmlEvent[name].target === name) {
                 // Skip.
                 return
             }
 
-            if (this.emitHtmlEvent[name]) {
-                this.e.removeEventListener(this.emitHtmlEvent[name])
+            if (this.fireHtmlEvent[name]) {
+                this.e.removeEventListener(this.fireHtmlEvent[name])
             }
 
             if (!target) {
-                delete this.emitHtmlEvent[name]
+                delete this.fireHtmlEvent[name]
             } else {
                 const listener = (e) => {
                     Component.getComponent(this).fire(target, {event: e, view: this})
                 }
                 listener.target = target
                 this.e.addEventListener(name, listener)
-                this.emitHtmlEvent[name] = listener
+                this.fireHtmlEvent[name] = listener
+            }
+        })
+    }
+
+    get signalHtmlEvent() {
+        if (!this.__signalHtmlEvent) {
+            this.__signalHtmlEvent = {}
+        }
+        return this.__signalHtmlEvent
+    }
+
+    set signalHtmlEvent(obj) {
+        let isArray = Array.isArray(obj)
+        let events
+        if (isArray) {
+            events = obj
+        } else {
+            events = Object.keys(obj)
+        }
+
+        events.forEach(name => {
+            const target = isArray ? name : obj[name]
+            if (this.signalHtmlEvent[name] && this.signalHtmlEvent[name].target === name) {
+                // Skip.
+                return
+            }
+
+            if (this.signalHtmlEvent[name]) {
+                this.e.removeEventListener(this.signalHtmlEvent[name])
+            }
+
+            if (!target) {
+                delete this.signalHtmlEvent[name]
+            } else {
+                const listener = (e) => {
+                    Component.getComponent(this).signal(target, {event: e, view: this})
+                }
+                listener.target = target
+                this.e.addEventListener(name, listener)
+                this.signalHtmlEvent[name] = listener
             }
         })
     }

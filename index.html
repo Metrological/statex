@@ -67,7 +67,7 @@
             static _template() {
                 return {
                     "Label": {x: 1000, y: 600, w: 400, h: 100, type: 'div', tag: 'te', style: {}, children: [{type: 'span', style: {color: 'red', fontSize: '200px'}, text: "Hello"}, '. How are you?']},
-                    "Image": {t: 'img', attribs: {src: 'https://www.metrological.com/images/logo2x.2.png'}}
+                    "Image": {t: 'img', attribs: {src: 'https://www.metrological.com/images/logo2x.2.png'}, fireHtmlEvent: {'mouseover': 'hover'}}
                 }
             }
 
@@ -82,6 +82,9 @@
 //                        setTimeout(() => {
 //                            this.sel(".Label").transform.item(500).rotate = 0
 //                        }, 1000)
+                    },
+                    "hover": function() {
+                        console.log('a1')
                     }
                 }
             }
