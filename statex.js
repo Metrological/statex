@@ -2915,7 +2915,7 @@ class Application extends Component {
             }
 
             if (this._focusPath.length !== newFocusPath.length || index !== newFocusPath.length) {
-                if (this.debug) {
+                if (this.__options.debug) {
                     console.log(this.stateManager._logPrefix + '* FOCUS ' + newFocusedComponent.getLocationString())
                 }
                 // Unfocus events.
@@ -2944,7 +2944,7 @@ class Application extends Component {
         }
 
         // Performance optimization: do not gather settings if no handler is defined.
-        if (this._handleFocusSettings !== Application.prototype._handleFocusSettings) {
+        if (this.__initialized && this._handleFocusSettings !== Application.prototype._handleFocusSettings) {
             // Get focus settings. These can be used for dynamic application-wide settings the depend on the
             // focus directly (such as the application background).
             const focusSettings = {}
@@ -2983,7 +2983,7 @@ class Application extends Component {
                     newParts.push(ptr)
                     ptr = ptr.cparent
                     if (!ptr) {
-                        current._throwError("Return value for _getFocus must be an attached descendant component but its '" + nextFocus.getLocationString() + "'")
+                        current._throwError("Return value for _getFocused must be an attached descendant component but its '" + nextFocus.getLocationString() + "'")
                     }
                 } while (ptr !== current)
 
@@ -3066,6 +3066,11 @@ class Application extends Component {
 
 }
 
+module.exports = Application
+
+const Utils = require('../tree/Utils');
+const Stage = require('../tree/Stage');
+const StateManager = require('./StateManager');
 class StateManager {
 
     constructor() {
