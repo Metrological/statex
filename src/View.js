@@ -4,7 +4,13 @@ class View extends EventEmitter {
         super()
         this.stage = stage
         this.__id = ++View.id
-        this.__e = this.stage.document.createElement(type)
+
+        if (type instanceof Element) {
+            this.__e = type
+        } else {
+            this.__e = this.stage.document.createElement(type)
+        }
+
         this.__e.__view = this
         this.__pivotX = 0.5
         this.__pivotY = 0.5
@@ -225,7 +231,7 @@ class View extends EventEmitter {
                             } else if (subCreateMode === true) {
                                 // Add to list immediately.
                                 let c
-                                if (Utils.isObjectLiteral(v)) {
+                                if (Utils.isObjectLiteral(v) || (v instanceof Element)) {
                                     // Catch this case to capture createMode flag.
                                     c = this.childList.createItem(v);
                                     c.patch(v, subCreateMode);

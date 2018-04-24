@@ -1,6 +1,18 @@
 module.exports = function(grunt) {
     grunt.initConfig({
         concat: {
+            options: {
+                banner: "window.statex = (function() {\n",
+                footer: `
+return {
+    Application: Application,
+    Component: Component,
+    Utils: Utils,
+    StageUtils: StageUtils,
+    EventEmitter: EventEmitter
+}
+})();`
+            },
             'statex' : {
                 src : [
                     './src/EventEmitter.js',
@@ -24,7 +36,7 @@ module.exports = function(grunt) {
                     './lib/animation/TransitionManager.js',
                     './lib/animation/TransitionSettings.js'
                 ],
-                dest : 'statex.js'
+                dest : 'dist/statex.js'
             }
         }
     });

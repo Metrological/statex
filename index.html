@@ -2,33 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <!--<script src="./statex.js"></script>-->
-
-    <script src="./src/EventEmitter.js"></script>
-
-    <script src="./lib/Utils.js"></script>
-    <script src="./lib/StageUtils.js"></script>
-
-    <script src="./src/Base.js"></script>
-    <script src="./src/Stage.js"></script>
-    <script src="./src/View.js"></script>
-    <script src="./src/ViewTransforms.js"></script>
-    <script src="./src/ObjectList.js"></script>
-    <script src="./src/ViewChildList.js"></script>
-
-    <script src="./lib/structure/Component.js"></script>
-    <script src="./lib/structure/Application.js"></script>
-    <script src="./lib/structure/StateManager.js"></script>
-
-    <script src="./lib/animation/Animation.js"></script>
-    <script src="./lib/animation/AnimationActionItems.js"></script>
-    <script src="./lib/animation/AnimationActionSettings.js"></script>
-    <script src="./lib/animation/AnimationManager.js"></script>
-    <script src="./lib/animation/AnimationSettings.js"></script>
-    <script src="./lib/animation/Transition.js"></script>
-    <script src="./lib/animation/TransitionManager.js"></script>
-    <script src="./lib/animation/TransitionSettings.js"></script>
-
+    <script src="./dist/statex.js"></script>
 </head>
 <body style="margin: 0;background:#000">
 
@@ -36,7 +10,7 @@
 
 <script>
     window.onload = function() {
-        class TestComponent extends Application {
+        class TestComponent extends statex.Application {
 
             static _template() {
                 return {
@@ -62,7 +36,7 @@
 
         }
 
-        class SubComponent extends Component {
+        class SubComponent extends statex.Component {
 
             static _template() {
                 return {
@@ -98,8 +72,6 @@
             }
         }
 
-        const stage = new Stage(document, {});
-
         const options = {debug: true}
         options.keys = {
             38: "Up",
@@ -115,7 +87,7 @@
             83: "Search"
         };
 
-        const app = new TestComponent(stage, options)
+        const app = new TestComponent(options)
 
         window.app = app
 

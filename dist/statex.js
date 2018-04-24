@@ -1,3 +1,4 @@
+window.statex = (function() {
 /**
  * This is a partial (and more efficient) implementation of the event emitter.
  * It attempts to maintain a one-to-one mapping between events and listeners, skipping an array lookup.
@@ -791,7 +792,13 @@ class View extends EventEmitter {
         super()
         this.stage = stage
         this.__id = ++View.id
-        this.__e = this.stage.document.createElement(type)
+
+        if (type instanceof Element) {
+            this.__e = type
+        } else {
+            this.__e = this.stage.document.createElement(type)
+        }
+
         this.__e.__view = this
         this.__pivotX = 0.5
         this.__pivotY = 0.5
@@ -1012,7 +1019,7 @@ class View extends EventEmitter {
                             } else if (subCreateMode === true) {
                                 // Add to list immediately.
                                 let c
-                                if (Utils.isObjectLiteral(v)) {
+                                if (Utils.isObjectLiteral(v) || (v instanceof Element)) {
                                     // Catch this case to capture createMode flag.
                                     c = this.childList.createItem(v);
                                     c.patch(v, subCreateMode);
@@ -2196,6 +2203,8 @@ class ViewChildList extends ObjectList {
             } else {
                 return new type(this._view.stage)
             }
+        } else if (object instanceof Element) {
+            return new View(this._view.stage, object)
         } else {
             return new View(this._view.stage)
         }
@@ -2988,11 +2997,11 @@ class Application extends Component {
                 // Not an immediate child: include full path to descendant.
                 const newParts = [nextFocus]
                 do {
-                    newParts.push(ptr)
-                    ptr = ptr.cparent
                     if (!ptr) {
                         current._throwError("Return value for _getFocused must be an attached descendant component but its '" + nextFocus.getLocationString() + "'")
                     }
+                    newParts.push(ptr)
+                    ptr = ptr.cparent
                 } while (ptr !== current)
 
                 // Add them reversed.
@@ -4543,3 +4552,12 @@ class TransitionSettings {
 
 TransitionSettings.prototype.isTransitionSettings = true
 
+
+return {
+    Application: Application,
+    Component: Component,
+    Utils: Utils,
+    StageUtils: StageUtils,
+    EventEmitter: EventEmitter
+}
+})();

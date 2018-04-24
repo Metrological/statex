@@ -70,6 +70,8 @@ class ViewChildList extends ObjectList {
             } else {
                 return new type(this._view.stage)
             }
+        } else if (object instanceof Element) {
+            return new View(this._view.stage, object)
         } else {
             return new View(this._view.stage)
         }
