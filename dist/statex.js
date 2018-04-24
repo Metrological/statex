@@ -884,7 +884,12 @@ class View extends EventEmitter {
         let names = Object.keys(settings)
         for (let i = 0, n = names.length; i < n; i++) {
             let name = names[i]
-            this.e.setAttribute(name, settings[name])
+
+            if (settings[name] === undefined) {
+                this.e.removeAttribute(name)
+            } else {
+                this.e.setAttribute(name, settings[name])
+            }
         }
     }
 
@@ -1019,10 +1024,12 @@ class View extends EventEmitter {
                             } else if (subCreateMode === true) {
                                 // Add to list immediately.
                                 let c
-                                if (Utils.isObjectLiteral(v) || (v instanceof Element)) {
+                                if (Utils.isObjectLiteral(v)) {
                                     // Catch this case to capture createMode flag.
                                     c = this.childList.createItem(v);
                                     c.patch(v, subCreateMode);
+                                } else if (v instanceof Element) {
+                                    c = this.childList.createItem(v);
                                 } else if (Utils.isObject(v)) {
                                     c = v
                                 }
@@ -1040,6 +1047,11 @@ class View extends EventEmitter {
                             if (child.parent) {
                                 child.parent.childList.remove(child)
                             }
+                        } else if (v instanceof Element) {
+                            let c = this.childList.createItem(v);
+                            c.ref = child.ref
+                            const index = child.parent.childList.getIndex(child)
+                            child.parent.childList.setAt(c, index)
                         } else if (Utils.isObjectLiteral(v)) {
                             child.patch(v, createMode)
                         } else if (v.isView) {
@@ -1957,6 +1969,10 @@ class ObjectList {
             c.patch(o);
             this.add(c);
             return c;
+        } else if (o instanceof Element) {
+            let c = this.createItem(o);
+            this.add(c);
+            return c;
         } else if (Array.isArray(o)) {
             for (let i = 0, n = o.length; i < n; i++) {
                 this.a(o[i]);
@@ -2181,7 +2197,7 @@ class ViewChildList extends ObjectList {
     }
 
     onSet(item, index, prevItem) {
-        this.e.replaceChild(item.e, prevItem)
+        this.e.replaceChild(item.e, prevItem.e)
         this.e.children[index].__view._updateParent()
         item._updateParent()
     }

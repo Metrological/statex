@@ -138,6 +138,10 @@ class ObjectList {
             c.patch(o);
             this.add(c);
             return c;
+        } else if (o instanceof Element) {
+            let c = this.createItem(o);
+            this.add(c);
+            return c;
         } else if (Array.isArray(o)) {
             for (let i = 0, n = o.length; i < n; i++) {
                 this.a(o[i]);
