@@ -3074,11 +3074,6 @@ class Application extends Component {
 
 }
 
-module.exports = Application
-
-const Utils = require('../tree/Utils');
-const Stage = require('../tree/Stage');
-const StateManager = require('./StateManager');
 class StateManager {
 
     constructor() {
