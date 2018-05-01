@@ -123,6 +123,15 @@ class Utils {
         return typeof value == 'string';
     }
 
+    static clone(v) {
+        if (Utils.isObject(v)) {
+            return this.cloneObj(v)
+        } else {
+            // Copy by value.
+            return v
+        }
+    }
+
     static cloneObj(obj) {
         let keys = Object.keys(obj);
         let clone = {}
@@ -192,6 +201,46 @@ class Utils {
         }
     }
 
+    static equalValues(v1, v2) {
+        if ((typeof v1) !== (typeof v2)) return false
+        if (Utils.isObjectLiteral(v1)) {
+            return Utils.equalObjectLiterals(v1, v2)
+        } else {
+            return v1 === v2
+        }
+    }
+
+    static equalObjectLiterals(obj1, obj2) {
+        let keys1 = Object.keys(obj1)
+        let keys2 = Object.keys(obj2)
+        if (keys1.length !== keys2.length) {
+            return false
+        }
+
+        for (let i = 0, n = keys1.length; i < n; i++) {
+            const k1 = keys1[i]
+            const k2 = keys2[i]
+            if (k1 !== k2) {
+                return false
+            }
+
+            const v1 = obj1[k1]
+            const v2 = obj2[k2]
+
+            if (Utils.isObjectLiteral(v1)) {
+                if (!this.equalObjectLiterals(v1, v2)) {
+                    return false
+                }
+            } else {
+                if (v1 !== v2) {
+                    return false
+                }
+            }
+        }
+
+        return true;
+    }
+
     static setToArray(s) {
         let result = [];
         s.forEach(function (value) {
@@ -214,8 +263,6 @@ class Utils {
         return charcode >= 65 && charcode <= 90
     }
 }
-
-Utils.isNode = (typeof window === "undefined");
 
 /**
  * Copyright Metrological, 2017
@@ -1327,11 +1374,11 @@ class View extends EventEmitter {
     }
 
     get visible() {
-        return (this.$.visibility === 'visible' || this.$.visibility === '')
+        return (this.$.display !== 'none')
     }
 
     set visible(v) {
-        this.$.visibility = v ? 'visible' : 'hidden'
+        this.$.display = v ? '' : 'none'
         this._updateActive()
     }
     

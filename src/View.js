@@ -539,11 +539,11 @@ class View extends EventEmitter {
     }
 
     get visible() {
-        return (this.$.visibility === 'visible' || this.$.visibility === '')
+        return (this.$.display !== 'none')
     }
 
     set visible(v) {
-        this.$.visibility = v ? 'visible' : 'hidden'
+        this.$.display = v ? '' : 'none'
         this._updateActive()
     }
     
