@@ -124,15 +124,15 @@ class Utils {
     }
 
     static clone(v) {
-        if (Utils.isObject(v)) {
-            return this.cloneObj(v)
+        if (Utils.isObjectLiteral(v)) {
+            return Utils.getDeepClone(v)
         } else {
             // Copy by value.
             return v
         }
     }
 
-    static cloneObj(obj) {
+    static cloneObjShallow(obj) {
         let keys = Object.keys(obj);
         let clone = {}
         for (let i = 0; i < keys.length; i++) {
@@ -182,7 +182,7 @@ class Utils {
             // Copy functions by reference.
             return obj;
         }
-        if (Utils.isArray(obj)) {
+        if (Array.isArray(obj)) {
             c = [];
             let keys = Object.keys(obj);
             for (i = 0; i < keys.length; i++) {
@@ -1357,7 +1357,11 @@ class View extends EventEmitter {
     }
 
     s(prop, value) {
-        this.__e.setAttribute(prop, value)
+        if (value === undefined) {
+            this.__e.removeAttribute(prop)
+        } else {
+            this.__e.setAttribute(prop, value)
+        }
     }
 
     get $() {
@@ -1620,6 +1624,10 @@ class View extends EventEmitter {
             return acc.concat(tag.split(' '))
         }, [])
 
+        if (this._ref) {
+            list.push(this._ref)
+        }
+
         this.__e.classList.add(...list)
     }
 
@@ -1783,7 +1791,7 @@ class View extends EventEmitter {
             }
 
             if (this.fireHtmlEvent[name]) {
-                this.e.removeEventListener(this.fireHtmlEvent[name])
+                this.e.removeEventListener(name, this.fireHtmlEvent[name])
             }
 
             if (!target) {

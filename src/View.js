@@ -522,7 +522,11 @@ class View extends EventEmitter {
     }
 
     s(prop, value) {
-        this.__e.setAttribute(prop, value)
+        if (value === undefined) {
+            this.__e.removeAttribute(prop)
+        } else {
+            this.__e.setAttribute(prop, value)
+        }
     }
 
     get $() {
@@ -785,6 +789,10 @@ class View extends EventEmitter {
             return acc.concat(tag.split(' '))
         }, [])
 
+        if (this._ref) {
+            list.push(this._ref)
+        }
+
         this.__e.classList.add(...list)
     }
 
@@ -948,7 +956,7 @@ class View extends EventEmitter {
             }
 
             if (this.fireHtmlEvent[name]) {
-                this.e.removeEventListener(this.fireHtmlEvent[name])
+                this.e.removeEventListener(name, this.fireHtmlEvent[name])
             }
 
             if (!target) {
