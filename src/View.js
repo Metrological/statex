@@ -189,6 +189,9 @@ class View extends EventEmitter {
         this.s('data-ref', v)
 
         // Add tag.
+        if (v.indexOf(" ") !== -1) {
+            v = v.split(" ").join("_")
+        }
         this.__e.classList.add(v)
 
         this._ref = v
