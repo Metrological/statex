@@ -835,10 +835,15 @@ class Stage extends EventEmitter {
 }
 class View extends EventEmitter {
 
-    constructor(stage, type = 'div') {
+    constructor(stage, type = undefined) {
         super()
+
         this.stage = stage
         this.__id = ++View.id
+
+        if (!type) {
+            type = this.constructor.getHtmlType()
+        }
 
         if (type instanceof Element) {
             this.__e = type
@@ -847,6 +852,7 @@ class View extends EventEmitter {
         }
 
         this.__e.__view = this
+
         this.__pivotX = 0.5
         this.__pivotY = 0.5
         this.__active = false
@@ -859,10 +865,13 @@ class View extends EventEmitter {
         this.__signalHtmlEvent = undefined
     }
 
+    static getHtmlType() {
+        return 'div'
+    }
+
     setAsRoot() {
         this.tagRoot = true
         this._updateAttached()
-        this._updateActive()
     }
 
     _updateParent() {
@@ -889,6 +898,9 @@ class View extends EventEmitter {
         if (this.__attached !== newAttached) {
             this.__attached = newAttached
 
+            // No need to recurse since we are already recursing when setting the attached flags.
+            this._updateActiveLocal()
+
             if (this.__childList) {
                 let children = this.__childList.get();
                 if (children) {
@@ -905,12 +917,33 @@ class View extends EventEmitter {
         }
     }
 
+    _updateActiveLocal() {
+        const newActive = this.isActive()
+        if (this.__active !== newActive) {
+            this.emit(newActive ? 'active' : 'inactive')
+            this.emit(newActive ? 'enable' : 'disable')
+            this.__active = newActive
+        }
+    }
+
     _updateActive() {
         const newActive = this.isActive()
         if (this.__active !== newActive) {
             this.emit(newActive ? 'active' : 'inactive')
             this.emit(newActive ? 'enable' : 'disable')
             this.__active = newActive
+
+            if (this.__childList) {
+                let children = this.__childList.get();
+                if (children) {
+                    let m = children.length;
+                    if (m > 0) {
+                        for (let i = 0; i < m; i++) {
+                            children[i]._updateActive();
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -925,6 +958,10 @@ class View extends EventEmitter {
 
     isVisible() {
         return (this.visible && this.alpha > 0)
+    }
+
+    set a(settings) {
+        this.attribs = settings
     }
 
     set attribs(settings) {
@@ -1155,6 +1192,8 @@ class View extends EventEmitter {
 
     _select(path) {
         if (path === "") return [this]
+
+
         let pointIdx = path.indexOf(".")
         let arrowIdx = path.indexOf(">")
         if (pointIdx === -1 && arrowIdx === -1) {
@@ -1168,32 +1207,24 @@ class View extends EventEmitter {
         }
 
         // Detect by first char.
-        let isChild
+        let isRef
         if (arrowIdx === 0) {
-            isChild = true
+            isRef = true
             path = path.substr(1)
         } else if (pointIdx === 0) {
-            isChild = false
+            isRef = false
             path = path.substr(1)
         } else {
             const firstCharcode = path.charCodeAt(0)
-            isChild = Utils.isUcChar(firstCharcode)
+            isRef = Utils.isUcChar(firstCharcode)
         }
 
-        if (isChild) {
-            // ">"
-            return this._selectChilds(path)
-        } else {
-            // "."
-            return this._selectDescs(path)
-        }
+        return this._selectChilds(path, isRef)
     }
 
-    _selectChilds(path) {
+    _selectChilds(path, isRef) {
         const pointIdx = path.indexOf(".")
         const arrowIdx = path.indexOf(">")
-
-        let isRef = Utils.isUcChar(path.charCodeAt(0))
 
         if (pointIdx === -1 && arrowIdx === -1) {
             if (isRef) {
@@ -1216,7 +1247,7 @@ class View extends EventEmitter {
             let total = []
             const subPath = path.substr(pointIdx + 1)
             for (let i = 0, n = next.length; i < n; i++) {
-                total = total.concat(next[i]._selectDescs(subPath))
+                total = total.concat(next[i]._selectChilds(subPath, false))
             }
             return total
         } else {
@@ -1231,25 +1262,7 @@ class View extends EventEmitter {
             let total = []
             const subPath = path.substr(arrowIdx + 1)
             for (let i = 0, n = next.length; i < n; i++) {
-                total = total.concat(next[i]._selectChilds(subPath))
-            }
-            return total
-        }
-    }
-
-    _selectDescs(path) {
-        const arrowIdx = path.indexOf(">")
-        if (arrowIdx === -1) {
-            // Use multi-tag path directly.
-            return this.mtag(path)
-        } else {
-            const str = path.substr(0, arrowIdx)
-            let next = this.mtag(str)
-
-            let total = []
-            const subPath = path.substr(arrowIdx + 1)
-            for (let i = 0, n = next.length; i < n; i++) {
-                total = total.concat(next[i]._selectChilds(subPath))
+                total = total.concat(next[i]._selectChilds(subPath, true))
             }
             return total
         }
@@ -1366,6 +1379,10 @@ class View extends EventEmitter {
 
     get $() {
         return this.__e.style
+    }
+
+    set $(v) {
+        this.style = v
     }
 
     get alpha() {
@@ -1784,7 +1801,11 @@ class View extends EventEmitter {
         }
 
         events.forEach(name => {
-            const target = isArray ? name : obj[name]
+            let target = isArray ? name : obj[name]
+            if (target === true) {
+                target = name
+            }
+
             if (this.fireHtmlEvent[name] && this.fireHtmlEvent[name].target === name) {
                 // Skip.
                 return
@@ -1824,7 +1845,11 @@ class View extends EventEmitter {
         }
 
         events.forEach(name => {
-            const target = isArray ? name : obj[name]
+            let target = isArray ? name : obj[name]
+            if (target === true) {
+                target = name
+            }
+
             if (this.signalHtmlEvent[name] && this.signalHtmlEvent[name].target === name) {
                 // Skip.
                 return
@@ -2632,11 +2657,16 @@ class Component extends View {
 
         this.__construct()
 
-        this.patch(this._getTemplate(), true)
+        this.patch(this.constructor._getTemplate(), true)
 
         this._registerLifecycleListeners()
 
         this.__signals = undefined
+    }
+
+    static getHtmlType() {
+        // Allow user to specify root type in component template.
+        return this._getTemplate().type || super.getHtmlType()
     }
 
     _registerLifecycleListeners() {
@@ -2739,14 +2769,14 @@ class Component extends View {
         return {}
     }
 
-    _getTemplate() {
-        if (!this.constructor.__template) {
-            this.constructor.__template = this.constructor._template()
-            if (!Utils.isObjectLiteral(this.constructor.__template)) {
+    static _getTemplate() {
+        if (!this.__template) {
+            this.__template = this._template()
+            if (!Utils.isObjectLiteral(this.__template)) {
                 this._throwError("Template object empty")
             }
         }
-        return this.constructor.__template
+        return this.__template
     }
 
     static _template() {
@@ -3274,7 +3304,7 @@ class StateManager {
 
                 const prevState = component.state
 
-                if (newState && Utils.isString(newState)) {
+                if (Utils.isString(newState)) {
                     this._setState(component, StateManager._ucfirst(newState), {event: event, args: args, prevState: prevState, newState: newState})
                 }
 
