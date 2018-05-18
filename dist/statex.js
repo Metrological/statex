@@ -2175,7 +2175,10 @@ class ObjectList {
                     c.marker = false
                 }
 
-                c.patch(s)
+                if (Utils.isObjectLiteral(s)) {
+                    c.patch(s)
+                }
+                
                 newItems.push(c)
             }
         }
