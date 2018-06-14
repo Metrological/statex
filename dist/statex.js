@@ -1648,6 +1648,11 @@ class View extends EventEmitter {
             list.push(this._ref)
         }
 
+        const tagRootId = this.tagRootId
+        if (tagRootId) {
+            list.push(`_R${tagRootId}`)
+        }
+
         this.__e.classList.add(...list)
     }
 
@@ -2178,7 +2183,7 @@ class ObjectList {
                 if (Utils.isObjectLiteral(s)) {
                     c.patch(s)
                 }
-                
+
                 newItems.push(c)
             }
         }
@@ -3421,6 +3426,8 @@ class StateManager {
                     }
                 }
             }
+
+            component.__state = StateManager._getSuperState(state, exit.length)
 
             for (let i = 0, n = enter.length; i < n; i++) {
                 component.__state = StateManager._getSuperState(newState, (n - (i + 1)))

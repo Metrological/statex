@@ -813,6 +813,11 @@ class View extends EventEmitter {
             list.push(this._ref)
         }
 
+        const tagRootId = this.tagRootId
+        if (tagRootId) {
+            list.push(`_R${tagRootId}`)
+        }
+
         this.__e.classList.add(...list)
     }
 
