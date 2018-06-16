@@ -99,4 +99,28 @@ class Stage extends EventEmitter {
         this._startLoop();
     }
 
+    create(object, createMode = false) {
+        if (Utils.isString(object)) {
+            const view = new View(this, 'span')
+            view.text = object
+            return view
+        } else if (object.type || object.t) {
+            const type = object.type || object.t
+            let view
+            if (typeof type === "string") {
+                view = new View(this, type)
+            } else {
+                view = new type(this)
+            }
+            view.patch(object, createMode)
+            return view
+        } else if (object instanceof Element) {
+            return new View(this, object)
+        } else {
+            const view = new View(this)
+            view.patch(object, createMode)
+            return view
+        }
+    }
+
 }

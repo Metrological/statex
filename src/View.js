@@ -278,10 +278,9 @@ class View extends EventEmitter {
                                 let c
                                 if (Utils.isObjectLiteral(v)) {
                                     // Catch this case to capture createMode flag.
-                                    c = this.childList.createItem(v);
-                                    c.patch(v, subCreateMode);
+                                    c = this.stage.create(v, subCreateMode)
                                 } else if (v instanceof Element) {
-                                    c = this.childList.createItem(v);
+                                    c = this.stage.create(v, subCreateMode)
                                 } else if (Utils.isObject(v)) {
                                     c = v
                                 }

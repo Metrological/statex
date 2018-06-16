@@ -832,6 +832,30 @@ class Stage extends EventEmitter {
         this._startLoop();
     }
 
+    create(object, createMode = false) {
+        if (Utils.isString(object)) {
+            const view = new View(this, 'span')
+            view.text = object
+            return view
+        } else if (object.type || object.t) {
+            const type = object.type || object.t
+            let view
+            if (typeof type === "string") {
+                view = new View(this, type)
+            } else {
+                view = new type(this)
+            }
+            view.patch(object, createMode)
+            return view
+        } else if (object instanceof Element) {
+            return new View(this, object)
+        } else {
+            const view = new View(this)
+            view.patch(object, createMode)
+            return view
+        }
+    }
+
 }
 class View extends EventEmitter {
 
@@ -1113,10 +1137,9 @@ class View extends EventEmitter {
                                 let c
                                 if (Utils.isObjectLiteral(v)) {
                                     // Catch this case to capture createMode flag.
-                                    c = this.childList.createItem(v);
-                                    c.patch(v, subCreateMode);
+                                    c = this.stage.create(v, subCreateMode)
                                 } else if (v instanceof Element) {
-                                    c = this.childList.createItem(v);
+                                    c = this.stage.create(v, subCreateMode)
                                 } else if (Utils.isObject(v)) {
                                     c = v
                                 }
@@ -2305,22 +2328,7 @@ class ViewChildList extends ObjectList {
     }
 
     createItem(object) {
-        if (Utils.isString(object)) {
-            const view = new View(this._view.stage, 'span')
-            view.text = object
-            return view
-        } else if (object.type || object.t) {
-            const type = object.type || object.t
-            if (typeof type === "string") {
-                return new View(this._view.stage, type)
-            } else {
-                return new type(this._view.stage)
-            }
-        } else if (object instanceof Element) {
-            return new View(this._view.stage, object)
-        } else {
-            return new View(this._view.stage)
-        }
+        return this._view.stage.create(object)
     }
 
     isItem(object) {

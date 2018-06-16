@@ -59,22 +59,7 @@ class ViewChildList extends ObjectList {
     }
 
     createItem(object) {
-        if (Utils.isString(object)) {
-            const view = new View(this._view.stage, 'span')
-            view.text = object
-            return view
-        } else if (object.type || object.t) {
-            const type = object.type || object.t
-            if (typeof type === "string") {
-                return new View(this._view.stage, type)
-            } else {
-                return new type(this._view.stage)
-            }
-        } else if (object instanceof Element) {
-            return new View(this._view.stage, object)
-        } else {
-            return new View(this._view.stage)
-        }
+        return this._view.stage.create(object)
     }
 
     isItem(object) {
