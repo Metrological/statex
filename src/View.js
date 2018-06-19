@@ -306,6 +306,9 @@ class View extends EventEmitter {
                         } else if (Utils.isObjectLiteral(v)) {
                             child.patch(v, createMode)
                         } else if (v.isView) {
+                            v.ref = child.ref
+                            const index = child.parent.childList.getIndex(child)
+                            child.parent.childList.setAt(v, index)
                         } else {
                             this._throwError("Unexpected value for path: " + path)
                         }
