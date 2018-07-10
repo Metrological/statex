@@ -2000,6 +2000,20 @@ class ObjectList {
         }
     }
 
+    replaceByRef(item) {
+        if (item.ref) {
+            const existingItem = this.getByRef(item.ref)
+            if (!existingItem) {
+                throw new Error('replaceByRef: no item found with reference: ' + item.ref)
+            }
+            this.replace(item, existingItem)
+        } else {
+            throw new Error('replaceByRef: no ref specified in item')
+        }
+        this.addAt(item, this._items.length);
+
+    }
+
     replace(item, prevItem) {
         const index = this.getIndex(prevItem)
         if (index === -1) {
@@ -3047,6 +3061,10 @@ class Application extends Component {
         this.__updateFocus()
     }
 
+    updateFocusPath() {
+        this.__updateFocus()
+    }
+
     __updateFocus(maxRecursion = 100) {
         const newFocusPath = this.__getFocusPath()
         const newFocusedComponent = newFocusPath[newFocusPath.length - 1]
@@ -3100,17 +3118,24 @@ class Application extends Component {
 
         // Performance optimization: do not gather settings if no handler is defined.
         if (this.__initialized && this._handleFocusSettings !== Application.prototype._handleFocusSettings) {
-            // Get focus settings. These can be used for dynamic application-wide settings the depend on the
-            // focus directly (such as the application background).
-            const focusSettings = {}
-            for (let i = 0, n = this._focusPath.length; i < n; i++) {
-                this._focusPath[i]._setFocusSettings(focusSettings)
-            }
-
-            this._handleFocusSettings(focusSettings, this.__prevFocusSettings, newFocusedComponent, prevFocusedComponent)
-
-            this.__prevFocusSettings = focusSettings
+            this.updateFocusSettings()
         }
+    }
+
+    updateFocusSettings() {
+        const newFocusPath = this.__getFocusPath()
+        const focusedComponent = newFocusPath[newFocusPath.length - 1]
+
+        // Get focus settings. These can be used for dynamic application-wide settings that depend on the
+        // focus directly (such as the application background).
+        const focusSettings = {}
+        for (let i = 0, n = this._focusPath.length; i < n; i++) {
+            this._focusPath[i]._setFocusSettings(focusSettings)
+        }
+
+        this._handleFocusSettings(focusSettings, this.__prevFocusSettings, focusedComponent)
+
+        this.__prevFocusSettings = focusSettings
     }
 
     _handleFocusSettings(settings, prevSettings, focused, prevFocused) {
@@ -3209,8 +3234,8 @@ class Application extends Component {
     _receiveKeydown(e) {
         const obj = {keyCode: e.keyCode}
         if (this.__keymap[e.keyCode]) {
-            if (!this.stage.application.focusTopDownEvent([{event: "_capture" + this.__keymap[e.keyCode]}, {event: "_captureKey", args: obj}])) {
-                this.stage.application.focusBottomUpEvent([{event: "_handle" + this.__keymap[e.keyCode]}, {event: "_handleKey", args: obj}])
+            if (!this.stage.application.focusTopDownEvent([{event: "_capture" + this.__keymap[e.keyCode], args: obj}, {event: "_captureKey", args: obj}])) {
+                this.stage.application.focusBottomUpEvent([{event: "_handle" + this.__keymap[e.keyCode], args: obj}, {event: "_handleKey", args: obj}])
             }
         } else {
             if (!this.stage.application.focusTopDownEvent("_captureKey", obj)) {

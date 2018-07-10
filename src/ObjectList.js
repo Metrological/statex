@@ -46,6 +46,20 @@ class ObjectList {
         }
     }
 
+    replaceByRef(item) {
+        if (item.ref) {
+            const existingItem = this.getByRef(item.ref)
+            if (!existingItem) {
+                throw new Error('replaceByRef: no item found with reference: ' + item.ref)
+            }
+            this.replace(item, existingItem)
+        } else {
+            throw new Error('replaceByRef: no ref specified in item')
+        }
+        this.addAt(item, this._items.length);
+
+    }
+
     replace(item, prevItem) {
         const index = this.getIndex(prevItem)
         if (index === -1) {
