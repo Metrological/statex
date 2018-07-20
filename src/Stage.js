@@ -115,6 +115,10 @@ class Stage extends EventEmitter {
             view.patch(object, createMode)
             return view
         } else if (object instanceof Element) {
+            if (object.__view) {
+                // Element already wrapped: reuse wrapper.
+                return object.__view
+            }
             return new View(this, object)
         } else {
             const view = new View(this)

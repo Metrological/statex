@@ -87,6 +87,13 @@ class EventEmitter {
         }
     }
 
+    removeAllListeners(name) {
+        if (this._hasEventListeners) {
+            delete this._eventFunction[name]
+            delete this._eventListeners[name]
+        }
+    }
+
 }
 
 EventEmitter.combiner = function(object, name, arg1, arg2, arg3) {
@@ -266,6 +273,10 @@ class Utils {
             iteratorResult = iterator.next();
         }
         return result;
+    }
+
+    static iteratorToSet(iterator) {
+        return new Set(this.iteratorToArray(iterator))
     }
 
     static isUcChar(charcode) {
@@ -857,6 +868,10 @@ class Stage extends EventEmitter {
             view.patch(object, createMode)
             return view
         } else if (object instanceof Element) {
+            if (object.__view) {
+                // Element already wrapped: reuse wrapper.
+                return object.__view
+            }
             return new View(this, object)
         } else {
             const view = new View(this)
@@ -1098,6 +1113,10 @@ class View extends EventEmitter {
             this.__childList = new ViewChildList(this)
         }
         return this.__childList
+    }
+
+    hasChildren() {
+        return this.__childList && (this.__childList.length > 0)
     }
 
     get children() {
@@ -2834,18 +2853,28 @@ class Component extends View {
         return {}
     }
 
-    hasFocus() {
+    hasFinalFocus() {
         let path = this.application._focusPath
         return path && path.length && path[path.length - 1] === this
     }
 
-    hasFinalFocus() {
+    hasFocus() {
         let path = this.application._focusPath
         return path && (path.indexOf(this) >= 0)
     }
 
     get cparent() {
         return Component.getParent(this)
+    }
+
+    seekAncestorByType(type) {
+        let c = this.cparent
+        while(c) {
+            if (c.constructor === type) {
+                return c
+            }
+            c = c.cparent
+        }
     }
 
     getSharedAncestorComponent(view) {
@@ -2974,11 +3003,11 @@ class Component extends View {
         }
     }
 
-    get _broadcasts() {
+    get broadcasts() {
         return this.__broadcasts
     }
 
-    set _broadcasts(v) {
+    set broadcasts(v) {
         if (!Utils.isObjectLiteral(v)) {
             this._throwError("Broadcasts: specify an object with broadcast-to-fire mappings")
         }
@@ -3117,7 +3146,7 @@ class Application extends Component {
         }
 
         // Performance optimization: do not gather settings if no handler is defined.
-        if (this.__initialized && this._handleFocusSettings !== Application.prototype._handleFocusSettings) {
+        if (this._handleFocusSettings !== Application.prototype._handleFocusSettings) {
             this.updateFocusSettings()
         }
     }

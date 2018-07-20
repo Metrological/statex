@@ -232,6 +232,10 @@ class View extends EventEmitter {
         return this.__childList
     }
 
+    hasChildren() {
+        return this.__childList && (this.__childList.length > 0)
+    }
+
     get children() {
         return this.childList.get()
     }
