@@ -2047,9 +2047,6 @@ class ObjectList {
             if (currentIndex != -1) {
                 if (currentIndex !== index) {
                     const fromIndex = currentIndex
-                    if (fromIndex <= index) {
-                        index--
-                    }
                     if (fromIndex !== index) {
                         this._items.splice(fromIndex, 1)
                         this._items.splice(index, 0, item)
@@ -2368,7 +2365,16 @@ class ViewChildList extends ObjectList {
     }
 
     onMove(item, fromIndex, toIndex) {
-        this.e.insertBefore(item.e, this.e.children[toIndex])
+        let compensate = 0
+        if (fromIndex < toIndex) {
+            compensate = 1
+        }
+        if (toIndex >= this.e.children.length - compensate) {
+            this.e.appendChild(item.e)
+        } else {
+            this.e.insertBefore(item.e, this.e.children[toIndex + compensate])
+        }
+
         item._updateParent()
     }
 

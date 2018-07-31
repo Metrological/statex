@@ -54,7 +54,16 @@ class ViewChildList extends ObjectList {
     }
 
     onMove(item, fromIndex, toIndex) {
-        this.e.insertBefore(item.e, this.e.children[toIndex])
+        let compensate = 0
+        if (fromIndex < toIndex) {
+            compensate = 1
+        }
+        if (toIndex >= this.e.children.length - compensate) {
+            this.e.appendChild(item.e)
+        } else {
+            this.e.insertBefore(item.e, this.e.children[toIndex + compensate])
+        }
+
         item._updateParent()
     }
 
