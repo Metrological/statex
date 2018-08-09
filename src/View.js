@@ -37,6 +37,7 @@ class View extends EventEmitter {
     setAsRoot() {
         this.tagRoot = true
         this._updateAttached()
+        this._updateActive()
     }
 
     _updateParent() {
@@ -63,8 +64,9 @@ class View extends EventEmitter {
         if (this.__attached !== newAttached) {
             this.__attached = newAttached
 
-            // No need to recurse since we are already recursing when setting the attached flags.
-            this._updateActiveLocal()
+            if (newAttached) {
+                this.emit('setup')
+            }
 
             if (this.__childList) {
                 let children = this.__childList.get();
@@ -82,21 +84,13 @@ class View extends EventEmitter {
         }
     }
 
-    _updateActiveLocal() {
-        const newActive = this.isActive()
-        if (this.__active !== newActive) {
-            this.emit(newActive ? 'active' : 'inactive')
-            this.emit(newActive ? 'enable' : 'disable')
-            this.__active = newActive
-        }
-    }
-
     _updateActive() {
         const newActive = this.isActive()
         if (this.__active !== newActive) {
+            this.__active = newActive
+
             this.emit(newActive ? 'active' : 'inactive')
             this.emit(newActive ? 'enable' : 'disable')
-            this.__active = newActive
 
             if (this.__childList) {
                 let children = this.__childList.get();

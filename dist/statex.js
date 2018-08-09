@@ -766,8 +766,11 @@ class Stage extends EventEmitter {
     }
 
     destroy() {
-        this._stopLoop()
-        this._destroyed = true;
+        if (!this._destroyed) {
+            this.application.destroy()
+            this._stopLoop()
+            this._destroyed = true;
+        }
     }
 
     getOption(name) {
@@ -920,6 +923,7 @@ class View extends EventEmitter {
     setAsRoot() {
         this.tagRoot = true
         this._updateAttached()
+        this._updateActive()
     }
 
     _updateParent() {
@@ -946,8 +950,9 @@ class View extends EventEmitter {
         if (this.__attached !== newAttached) {
             this.__attached = newAttached
 
-            // No need to recurse since we are already recursing when setting the attached flags.
-            this._updateActiveLocal()
+            if (newAttached) {
+                this.emit('setup')
+            }
 
             if (this.__childList) {
                 let children = this.__childList.get();
@@ -965,21 +970,13 @@ class View extends EventEmitter {
         }
     }
 
-    _updateActiveLocal() {
-        const newActive = this.isActive()
-        if (this.__active !== newActive) {
-            this.emit(newActive ? 'active' : 'inactive')
-            this.emit(newActive ? 'enable' : 'disable')
-            this.__active = newActive
-        }
-    }
-
     _updateActive() {
         const newActive = this.isActive()
         if (this.__active !== newActive) {
+            this.__active = newActive
+
             this.emit(newActive ? 'active' : 'inactive')
             this.emit(newActive ? 'enable' : 'disable')
-            this.__active = newActive
 
             if (this.__childList) {
                 let children = this.__childList.get();
@@ -2746,6 +2743,12 @@ class Component extends View {
     }
 
     _registerLifecycleListeners() {
+        this.on('setup', () => {
+            if (!this.__initialized) {
+                this.fire('_setup')
+            }
+        })
+
         this.on('attach', () => {
             if (!this.__initialized) {
                 this.__init()
@@ -3042,12 +3045,18 @@ class Application extends Component {
         // Save options temporarily to avoid having to pass it through the constructor.
         Application._temp_options = options
 
+        // Booting flag is used to postpone updateFocusSettings
+        Application.booting = true
         const stage = new Stage(window.document, options.stage)
         super(stage, properties)
+        Application.booting = false
 
         // We must construct while the application is not yet attached.
         // That's why we 'init' the stage later (which actually emits the attach event).
         this.stage.init()
+
+        // Initially, the focus settings are updated after both the stage and application are constructed.
+        this.updateFocusSettings()
 
         this.__keymap = this.getOption('keys')
         if (this.__keymap) {
@@ -3153,7 +3162,9 @@ class Application extends Component {
 
         // Performance optimization: do not gather settings if no handler is defined.
         if (this._handleFocusSettings !== Application.prototype._handleFocusSettings) {
-            this.updateFocusSettings()
+            if (!Application.booting) {
+                this.updateFocusSettings()
+            }
         }
     }
 
@@ -3277,6 +3288,13 @@ class Application extends Component {
                 this.stage.application.focusBottomUpEvent("_handleKey", obj)
             }
         }
+    }
+
+    destroy() {
+        // This forces the _detach, _disabled and _active events to be called.
+        this.stage.root = undefined
+        this._updateAttached()
+        this._updateActive()
     }
 
 }

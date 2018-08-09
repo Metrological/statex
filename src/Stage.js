@@ -13,8 +13,11 @@ class Stage extends EventEmitter {
     }
 
     destroy() {
-        this._stopLoop()
-        this._destroyed = true;
+        if (!this._destroyed) {
+            this.application.destroy()
+            this._stopLoop()
+            this._destroyed = true;
+        }
     }
 
     getOption(name) {
