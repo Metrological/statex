@@ -131,7 +131,7 @@ class Utils {
     }
 
     static clone(v) {
-        if (Utils.isObjectLiteral(v)) {
+        if (Utils.isObjectLiteral(v) || Array.isArray(v)) {
             return Utils.getDeepClone(v)
         } else {
             // Copy by value.
@@ -3408,7 +3408,7 @@ class StateManager {
                         }
                     }
                 } catch(e) {
-                    console.error(e)
+                    console.error(e.stack)
                 }
             }
             if (validAction) {
