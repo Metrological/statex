@@ -60,7 +60,7 @@ class View extends EventEmitter {
     }
 
     _updateAttached() {
-        const newAttached = this.isAttached()
+        const newAttached = this._isAttached()
         if (this.__attached !== newAttached) {
             this.__attached = newAttached
 
@@ -85,7 +85,7 @@ class View extends EventEmitter {
     }
 
     _updateActive() {
-        const newActive = this.isActive()
+        const newActive = this._isActive()
         if (this.__active !== newActive) {
             this.__active = newActive
 
@@ -107,16 +107,24 @@ class View extends EventEmitter {
     }
 
     // We don't have 'within bounds' support so we bundle active/enabled events.
-    isAttached() {
+    _isAttached() {
         return (this.__parent ? this.__parent.__attached : (this.stage.root === this))
     }
 
-    isActive() {
+    _isActive() {
         return this.isVisible() && (this.__parent ? this.__parent.__active : (this.stage.root === this));
     }
 
     isVisible() {
         return (this.visible && this.alpha > 0)
+    }
+
+    get attached() {
+        return this.__attached
+    }
+
+    get active() {
+        return this.__active
     }
 
     set a(settings) {
@@ -941,7 +949,7 @@ class View extends EventEmitter {
 
     getSmooth(property, v) {
         let t = this._getTransition(property);
-        if (t && t.isAttached()) {
+        if (t && t.attached) {
             return t.targetValue;
         } else {
             return v;

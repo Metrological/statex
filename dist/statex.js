@@ -946,7 +946,7 @@ class View extends EventEmitter {
     }
 
     _updateAttached() {
-        const newAttached = this.isAttached()
+        const newAttached = this._isAttached()
         if (this.__attached !== newAttached) {
             this.__attached = newAttached
 
@@ -971,7 +971,7 @@ class View extends EventEmitter {
     }
 
     _updateActive() {
-        const newActive = this.isActive()
+        const newActive = this._isActive()
         if (this.__active !== newActive) {
             this.__active = newActive
 
@@ -993,16 +993,24 @@ class View extends EventEmitter {
     }
 
     // We don't have 'within bounds' support so we bundle active/enabled events.
-    isAttached() {
+    _isAttached() {
         return (this.__parent ? this.__parent.__attached : (this.stage.root === this))
     }
 
-    isActive() {
+    _isActive() {
         return this.isVisible() && (this.__parent ? this.__parent.__active : (this.stage.root === this));
     }
 
     isVisible() {
         return (this.visible && this.alpha > 0)
+    }
+
+    get attached() {
+        return this.__attached
+    }
+
+    get active() {
+        return this.__active
     }
 
     set a(settings) {
@@ -1827,7 +1835,7 @@ class View extends EventEmitter {
 
     getSmooth(property, v) {
         let t = this._getTransition(property);
-        if (t && t.isAttached()) {
+        if (t && t.attached) {
             return t.targetValue;
         } else {
             return v;
@@ -2728,13 +2736,13 @@ class Component extends View {
         this.__firstActive = false
         this.__firstEnable = false
 
+        this.__signals = undefined
+
         this.__construct()
 
         this.patch(this.constructor._getTemplate(), true)
 
         this._registerLifecycleListeners()
-
-        this.__signals = undefined
     }
 
     static getHtmlType() {
@@ -3344,15 +3352,20 @@ class StateManager {
         }
 
         let found
-        if (Array.isArray(event)) {
-            found = this._mfire(component, event, args)
-        } else {
-            found = this._fire(component, event, args)
-        }
+        try {
+            if (Array.isArray(event)) {
+                found = this._mfire(component, event, args)
+            } else {
+                found = this._fire(component, event, args)
+            }
 
-        if (found && primaryEvent) {
-            // Update focus.
-            component.application.__updateFocus()
+            if (found && primaryEvent) {
+                // Update focus.
+                component.application.__updateFocus()
+            }
+        } catch(e) {
+            console.error(`${component.constructor.name} "${component.state}".${event} ${component.getLocationString()}`)
+            console.error(e.stack)
         }
 
         this._fireLevel--
@@ -3396,19 +3409,15 @@ class StateManager {
             let validAction = (result.s !== undefined)
             let newState = result.s
             if (result.a) {
-                try {
+                if (this.debug) {
+                    console.log(`${this._logPrefix}${component.constructor.name} "${component.state}".${event} ${component.getLocationString()}`)
+                }
+                newState = result.a.call(component, args)
+                validAction = (newState !== false)
+                if (!validAction) {
                     if (this.debug) {
-                        console.log(`${this._logPrefix}${component.constructor.name} "${component.state}".${event} ${component.getLocationString()}`)
+                        console.log(`${this._logPrefix}[PASS THROUGH]`)
                     }
-                    newState = result.a.call(component, args)
-                    validAction = (newState !== false)
-                    if (!validAction) {
-                        if (this.debug) {
-                            console.log(`${this._logPrefix}[PASS THROUGH]`)
-                        }
-                    }
-                } catch(e) {
-                    console.error(e.stack)
                 }
             }
             if (validAction) {
@@ -3620,7 +3629,7 @@ class Animation extends EventEmitter {
     }
 
     start() {
-        if (this._view && this._view.isAttached()) {
+        if (this._view && this._view.attached) {
             this._p = 0
             this._delayLeft = this.settings.delay
             this._repeatsLeft = this.settings.repeat
@@ -3713,7 +3722,7 @@ class Animation extends EventEmitter {
     }
 
     isActive() {
-        return (this._state == Animation.STATES.PLAYING || this._state == Animation.STATES.STOPPING) && this._view && this._view.isAttached()
+        return (this._state == Animation.STATES.PLAYING || this._state == Animation.STATES.STOPPING) && this._view && this._view.attached
     }
 
     progress(dt) {
@@ -4573,7 +4582,7 @@ class Transition extends EventEmitter {
     }
 
     isAttached() {
-        return this._view.isAttached()
+        return this._view.attached
     }
 
     isRunning() {
