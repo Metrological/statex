@@ -2843,12 +2843,16 @@ class Component extends View {
     }
 
     _getStates() {
-        if (!this.constructor.__states) {
+        // Be careful with class-based static inheritance.
+        if (this.constructor.__hasStates !== this.constructor) {
+            this.constructor.__hasStates = this.constructor
+
             this.constructor.__states = this.constructor._states()
             if (!Utils.isObjectLiteral(this.constructor.__states)) {
                 this._throwError("States object empty")
             }
         }
+
         return this.constructor.__states
     }
 
@@ -2856,14 +2860,16 @@ class Component extends View {
         return {}
     }
 
-    static _getTemplate() {
-        if (!this.__template) {
-            this.__template = this._template()
-            if (!Utils.isObjectLiteral(this.__template)) {
+    _getTemplate() {
+        if (this.constructor.__hasTemplate !== this.constructor) {
+            this.constructor.__hasTemplate = this.constructor
+
+            this.constructor.__template = this.constructor._template()
+            if (!Utils.isObjectLiteral(this.constructor.__template)) {
                 this._throwError("Template object empty")
             }
         }
-        return this.__template
+        return this.constructor.__template
     }
 
     static _template() {
@@ -2925,43 +2931,62 @@ class Component extends View {
      */
     signal(event, args = {}, bubble = false) {
         if (!Utils.isObjectLiteral(args)) {
-            this._throwError("Signal: args must be object")
+            this._throwError("Signal: args must be object");
         }
 
         if (!args._source) {
-            args = Object.assign({_source: this}, args)
+            args = Object.assign({_source: this}, args);
         }
 
         if (this.__signals && this.cparent) {
-            let fireEvent = this.__signals[event]
+            let fireEvent = this.__signals[event];
             if (fireEvent === false) {
                 // Ignore event, even when bubbling.
-                return
+                return;
             }
             if (fireEvent) {
                 if (fireEvent === true) {
-                    fireEvent = event
+                    fireEvent = event;
                 }
 
-                const handled = this.cparent.fire(fireEvent, args)
-                if (handled) return
+                const handled = this.cparent.fire(fireEvent, args);
+                if (handled) return;
             }
         }
-        if (bubble && this.cparent) {
+
+        let passSignal = (this.__passSignals && this.__passSignals[event]);
+        const cparent = this.cparent;
+        if (cparent && (cparent._passSignals || passSignal || bubble)) {
             // Bubble up.
-            this.cparent.signal(event, args, bubble)
+            if (passSignal && passSignal !== true) {
+                // Replace signal name.
+                event = passSignal;
+            }
+            this.cparent.signal(event, args, bubble);
         }
     }
 
     get signals() {
-        return this.__signals
+        return this.__signals;
     }
 
     set signals(v) {
         if (!Utils.isObjectLiteral(v)) {
-            this._throwError("Signals: specify an object with signal-to-fire mappings")
+            this._throwError("Signals: specify an object with signal-to-fire mappings");
         }
-        this.__signals = Object.assign(this.__signals || {}, v)
+        this.__signals = Object.assign(this.__signals || {}, v);
+    }
+
+    get passSignals() {
+        return this.__passSignals || {};
+    }
+
+    set passSignals(v) {
+        this.__passSignals = Object.assign(this.__passSignals || {}, v);
+    }
+
+    get _passSignals() {
+        return false;
     }
 
     /**
@@ -3117,61 +3142,70 @@ class Application extends Component {
         this.__updateFocus()
     }
 
-    __updateFocus(maxRecursion = 100) {
-        const newFocusPath = this.__getFocusPath()
-        const newFocusedComponent = newFocusPath[newFocusPath.length - 1]
-        const prevFocusedComponent = this._focusPath ? this._focusPath[this._focusPath.length - 1] : undefined
+    __updateFocus() {
+        if (this.__updateFocusRec()) {
+            // Performance optimization: do not gather settings if no handler is defined.
+            if (this._handleFocusSettings !== Application.prototype._handleFocusSettings) {
+                if (!Application.booting) {
+                    this.updateFocusSettings();
+                }
+            }
+        }
+    }
+
+    __updateFocusRec(maxRecursion = 100) {
+        const newFocusPath = this.__getFocusPath();
+        const newFocusedComponent = newFocusPath[newFocusPath.length - 1];
+        const prevFocusedComponent = this._focusPath ? this._focusPath[this._focusPath.length - 1] : undefined;
 
         if (!prevFocusedComponent) {
             // First focus.
-            this._focusPath = newFocusPath
+            this._focusPath = newFocusPath;
 
             // Focus events.
             for (let i = 0, n = this._focusPath.length; i < n; i++) {
-                this._focusPath[i].__focus(newFocusedComponent, undefined)
+                this._focusPath[i].__focus(newFocusedComponent, undefined);
             }
+            return true;
         } else {
-            let m = Math.min(this._focusPath.length, newFocusPath.length)
-            let index
+            let m = Math.min(this._focusPath.length, newFocusPath.length);
+            let index;
             for (index = 0; index < m; index++) {
                 if (this._focusPath[index] !== newFocusPath[index]) {
-                    break
+                    break;
                 }
             }
 
             if (this._focusPath.length !== newFocusPath.length || index !== newFocusPath.length) {
                 if (this.__options.debug) {
-                    console.log(this.stateManager._logPrefix + '* FOCUS ' + newFocusedComponent.getLocationString())
+                    console.log(this.stateManager._logPrefix + '* FOCUS ' + newFocusedComponent.getLocationString());
                 }
                 // Unfocus events.
                 for (let i = this._focusPath.length - 1; i >= index; i--) {
-                    this._focusPath[i].__unfocus(newFocusedComponent, prevFocusedComponent)
+                    this._focusPath[i].__unfocus(newFocusedComponent, prevFocusedComponent);
                 }
 
-                this._focusPath = newFocusPath
+                this._focusPath = newFocusPath;
 
                 // Focus events.
                 for (let i = index, n = this._focusPath.length; i < n; i++) {
-                    this._focusPath[i].__focus(newFocusedComponent, prevFocusedComponent)
+                    this._focusPath[i].__focus(newFocusedComponent, prevFocusedComponent);
                 }
 
                 // Focus changed events.
                 for (let i = 0; i < index; i++) {
-                    this._focusPath[i].__focusChange(newFocusedComponent, prevFocusedComponent)
+                    this._focusPath[i].__focusChange(newFocusedComponent, prevFocusedComponent);
                 }
 
                 // Focus events could trigger focus changes.
                 if (maxRecursion-- === 0) {
-                    throw new Error("Max recursion count reached in focus update")
+                    throw new Error("Max recursion count reached in focus update");
                 }
-                this.__updateFocus(maxRecursion)
-            }
-        }
+                this.__updateFocus(maxRecursion);
 
-        // Performance optimization: do not gather settings if no handler is defined.
-        if (this._handleFocusSettings !== Application.prototype._handleFocusSettings) {
-            if (!Application.booting) {
-                this.updateFocusSettings()
+                return true;
+            } else {
+                return false;
             }
         }
     }
